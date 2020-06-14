@@ -18,3 +18,4 @@ gerbers.zip
 gerbers/
 *.lck
 server/server
+client/client
