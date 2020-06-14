@@ -1,12 +1,12 @@
 package sshoverws
 
 import (
-	"context"
-	"flag"
 	"log"
+	"net"
+	"time"
+	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/gorilla/mux"
 )
 
 var upgrader websocket.Upgrader
@@ -18,15 +18,15 @@ func (wsa *WSAddress) Network() string {
 	return "ws"
 }
 func (wsa *WSAddress) String() string {
-	return host
+	return wsa.host
 }
-type WSTranport struct {
-	conn websocket.Conn
+type WSTransport struct {
+	conn *websocket.Conn
 }
 
 func (wst *WSTransport) Read(b []byte) (n int, err error) {
 	// Errors from here are fatal, connection must be reset
-	tp, r, err := wst.conn.NextReader()
+	mt, r, err := wst.conn.NextReader()
 	if websocket.IsCloseError(err,
 		websocket.CloseNormalClosure,
 		websocket.CloseAbnormalClosure,
@@ -46,7 +46,7 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	if (err != nil) {
 		return 0, err
 	}
-	n, err := wc.Write(b)
+	n, err = wc.Write(b)
 	if err != nil {
 		return n, err
 	}
@@ -56,11 +56,11 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 func (wst *WSTransport) Close() error {
 	return wst.conn.Close()
 }
-func (wst *WSTransport) LocalAddr() Addr {
+func (wst *WSTransport) LocalAddr() net.Addr {
 	// TODO UNIMPLEMENTED
-	return &wsAddres{host:"example"}
+	return &WSAddress{host:"example"}
 }
-func (wst *WSTransport) RemoteAddr() Addr {
+func (wst *WSTransport) RemoteAddr() net.Addr {
 	// TODO UNIMPLEMENTED
 	return &WSAddress{host:"example"}
 }
@@ -77,8 +77,8 @@ func (wst *WSTransport) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-func Upgrade(w http.ResponseWriter, r *http.Request) *WSTransport, error {
-	conn, err := upgrade.Upgrade(w, r, nil)
+func Upgrade(w http.ResponseWriter, r *http.Request) (*WSTransport, error) {
+	conn, err := upgrader.Upgrade(w, r, nil)
 	return &WSTransport{conn:conn}, err
 }
 
