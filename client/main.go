@@ -33,28 +33,10 @@ func main() {
 	dialer := websocket.Dialer{}
 	log.Printf("Made dialer")
 	conn, resp, err := dialer.Dial("ws://houston.osoximeter.com",nil)
-	// Why can't ws be http?
 	if err != nil {
 		log.Printf("Err (%s)", err)
 	}
 	dialError("houston.osoximeter.com", resp, err)
-	log.Printf("Dialed")
-	log.Printf("Wrapping")
 	ioConn := sshoverws.WrapConn(conn)
-	log.Printf("Wrapped")
-	var buffer = make([]byte, 256*64)
-	ioConn.Write([]byte("Yes!!!!"))
-	ioConn.Read(buffer)
-	log.Printf("Buffer: %s", buffer)
-	ioConn.Read(buffer)
-	log.Printf("Buffer: %s", buffer)
-	ioConn.Read(buffer)
-	log.Printf("Buffer: %s", buffer)
-	ioConn.Read(buffer)
-	log.Printf("Buffer: %s", buffer)
-	ioConn.Read(buffer)
-	log.Printf("Buffer: %s", buffer)
-	n, _ := ioConn.Read(buffer)
-	log.Printf("Buffer: %s", buffer[:n])
 	defer ioConn.Close()
 }
