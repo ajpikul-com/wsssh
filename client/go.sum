@@ -4,3 +4,5 @@ github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/ad
 github.com/mangodx/AccessTunnel v0.0.0-20200614193645-d770f222230f h1:rdRa+w8DzuVJEifFWjvUJltBKf4B7oWXUuxYfUJnpDA=
 github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614193645-d770f222230f h1:ulr8ri6j4rXOs/+jvxKkMdWnXQMlSb76vJVCgVkxl/k=
 github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614193645-d770f222230f/go.mod h1:iboGyThjsuH4u0nn7aFdEpPpDJALfb46PgQleFtKAAI=
+github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614215549-38edbe16b892 h1:iFU6r0gnW29wjkxHdECuPuckLyEkvf39KXDbn1UzVKE=
+github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614215549-38edbe16b892/go.mod h1:iboGyThjsuH4u0nn7aFdEpPpDJALfb46PgQleFtKAAI=
