@@ -63,6 +63,7 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	return n, err
 }
 func (wst *WSTransport) Close() error {
+	log.Printf("Trying to close")
 	return wst.conn.Close()
 }
 func (wst *WSTransport) LocalAddr() net.Addr {

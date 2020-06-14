@@ -9,10 +9,10 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	dialer := websocket.Dialer{}
-	conn, resp, err := dialer.Dial("houston.osoximeter.com",nil)
+	conn, _, err := dialer.Dial("houston.osoximeter.com",nil)
 	if err != nil {
 		log.Printf("Err (%s)", err)
 	}
