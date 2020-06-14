@@ -27,13 +27,14 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error on upgrade (%s)", err)
 	}
-	conn.Write([]byte("I did it!"))
-	conn.Write([]byte("I did it!"))
-	conn.Write([]byte("I did it!"))
-	conn.Write([]byte("I did it!"))
-	conn.Write([]byte("I did it!"))
+	conn.Write([]byte("I did 11!"))
+	conn.Write([]byte("I did 11!"))
+	conn.Write([]byte("I did 11!"))
+	conn.Write([]byte("I did 11!"))
+	conn.Write([]byte("I did 11!"))
 	buffer := make([]byte, 32*256)
 	conn.Read(buffer)
+	log.Printf("Buffer: %s", buffer)
 	conn.Write([]byte("Got it"))
 // read, write, read, write, read, write, read (if close) close
 }
