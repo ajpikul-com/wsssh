@@ -90,6 +90,6 @@ func Upgrade(w http.ResponseWriter, r *http.Request) (*WSTransport, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	return WrapConn(conn), err
 }
-func WrapConn(conn websocket.Conn) *WSTransport {
+func WrapConn(conn *websocket.Conn) *WSTransport {
 	return &WSTransport{conn:conn}
 }

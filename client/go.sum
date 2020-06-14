@@ -6,3 +6,5 @@ github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614193645-d770f222230f h1:
 github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614193645-d770f222230f/go.mod h1:iboGyThjsuH4u0nn7aFdEpPpDJALfb46PgQleFtKAAI=
 github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614215549-38edbe16b892 h1:iFU6r0gnW29wjkxHdECuPuckLyEkvf39KXDbn1UzVKE=
 github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614215549-38edbe16b892/go.mod h1:iboGyThjsuH4u0nn7aFdEpPpDJALfb46PgQleFtKAAI=
+github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614215720-48965b79ccdc h1:/4tyQYc2AkasfZIRMX9lWuEq7HAJdxQmH0oDnltc+Bk=
+github.com/mangodx/AccessTunnel/sshoverws v0.0.0-20200614215720-48965b79ccdc/go.mod h1:iboGyThjsuH4u0nn7aFdEpPpDJALfb46PgQleFtKAAI=
