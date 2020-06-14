@@ -88,6 +88,8 @@ func (wst *WSTransport) SetWriteDeadline(t time.Time) error {
 
 func Upgrade(w http.ResponseWriter, r *http.Request) (*WSTransport, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
-	return &WSTransport{conn:conn}, err
+	return WrapConn(conn), err
 }
-
+func WrapConn(conn net.Conn) *WStransport {
+	return &WSTransport{conn:conn}
+}

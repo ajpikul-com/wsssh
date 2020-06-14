@@ -22,12 +22,20 @@ func init(){
 	// ESTABLISH SSH CONNETION DOWNPIPE
 
 func handleProxy(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Req: %s %s", r.Host, r.URL.Path)
 	conn, err := sshoverws.Upgrade(w, r)
 	if err != nil {
 		log.Printf("Error on upgrade (%s)", err)
 	}
-	_ = conn
-	// read, write, read, write, read, write, read (if close) close
+	conn.Write([]byte("I did it!"))
+	conn.Write([]byte("I did it!"))
+	conn.Write([]byte("I did it!"))
+	conn.Write([]byte("I did it!"))
+	conn.Write([]byte("I did it!"))
+	buffer := make([]byte, 32*256)
+	conn.Read(buffer)
+	conn.Write([]byte("Got it"))
+// read, write, read, write, read, write, read (if close) close
 }
 
 func main(){
