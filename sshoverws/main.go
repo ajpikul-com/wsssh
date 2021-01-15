@@ -1,11 +1,12 @@
 package sshoverws
 
 import (
-	"log"
 	"net"
 	"time"
+	"errors"
 	"net/http"
 	"context"
+	"strconv"
 	"io"
 
 	"github.com/ayjayt/ilog"
@@ -61,19 +62,20 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			} else if mt == 10 {
 				mtStr = "PongMessage"
 			}
-			log.Fatalf("sshoverws.WSTransport.Read() received a non-binary message: %s\n", mtStr)
+			defaultLogger.Error("sshoverws.WSTransport.Read() received a non-binary message: " + mtStr)
+			return 0, errors.New("Wrong error type received")
 		}
 		wst.r = r
 	}
 	n, err = wst.r.Read(b) // Read errors are not stated to be fatal but except for EOF seem pretty screwed
-	log.Printf(">Read: %d, %s", n, err)
+	defaultLogger.Info(">Read: " + strconv.Itoa(n) + ", " + err.Error())
 	if err != nil {
 		if err == io.EOF { // Not sure what else it could be, check to see if fatal
 			err = nil
 		}
 		wst.r = nil
 	}
-	return n, err 
+	return n, err
 }
 
 // Write does a write but facilitates getting a reader
@@ -92,7 +94,7 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 
 // Close is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) Close() error {
-	log.Printf("Trying to close")
+	defaultLogger.Info("Calling sshoverws.WSTransport.Close()")
 	return wst.conn.Close()
 }
 
@@ -149,7 +151,7 @@ func Dial(urlStr string, requestHeader http.Header) (*WSTransport, *http.Respons
 	dialer := websocket.Dialer{}
 	conn, resp, err := dialer.Dial(urlStr, requestHeader)
 	if err != nil {
-		log.Printf("sshoverws.Dial(): dialer.Dial error: %s", err)
+		defaultLogger.Error("sshoverws.Dial(): dialer.Dial error: " + err.Error())
 		return nil, nil, err
 	}
 	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
@@ -160,7 +162,7 @@ func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) 
 	dialer := websocket.Dialer{}
 	conn, resp, err := dialer.DialContext(ctx, urlStr, requestHeader)
 	if err != nil {
-		log.Printf("sshoverws.DialContext(): dialer.DialContext error: %s", err)
+		defaultLogger.Error("sshoverws.DialContext(): dialer.DialContext error: " + err.Error())
 		return nil, nil, err
 	}
 	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
