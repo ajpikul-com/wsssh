@@ -1,4 +1,4 @@
-module github.com/mangodx/AccessTunnel/sshoverws
+module github.com/ayjayt/AccessTunnel/sshoverws
 
 go 1.14
 
