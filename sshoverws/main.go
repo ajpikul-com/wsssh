@@ -5,51 +5,78 @@ import (
 	"net"
 	"time"
 	"net/http"
+	"context"
+	"io"
+
+	"github.com/ayjayt/ilog"
 
 	"github.com/gorilla/websocket"
 )
 
-var upgrader websocket.Upgrader
+var defaultLogger ilog.LoggerInterface
+
 func init() {
-	upgrader = websocket.Upgrader{
-		ReadBufferSize:   1024,
-		WriteBufferSize:  1024,
-		HandshakeTimeout: 10*time.Second,
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
+	if defaultLogger == nil {
+		defaultLogger = new(ilog.EmptyLogger)
 	}
-}
-type WSAddress struct {
-	host string
-}
-func (wsa *WSAddress) Network() string {
-	return "ws"
-}
-func (wsa *WSAddress) String() string {
-	return wsa.host
-}
-type WSTransport struct {
-	conn *websocket.Conn
 }
 
-func (wst *WSTransport) Read(b []byte) (n int, err error) {
-	// Errors from here are fatal, connection must be reset
-	mt, r, err := wst.conn.NextReader()
-	if websocket.IsCloseError(err,
-		websocket.CloseNormalClosure,
-		websocket.CloseAbnormalClosure,
-	) {
-		return
-	}
-	if err != nil {
-		return 0, err
-	}
-	if mt != websocket.BinaryMessage {
-		log.Fatal("Not a binary message")
-	}
-	return r.Read(b)
+// SetDefaultLogger attaches a logger to the lib. See github.com/ayajyt/ilog
+func SetDefaultLogger(newLogger ilog.LoggerInterface) {
+	defaultLogger = newLogger
+	defaultLogger.Info("Default Logger Set")
 }
+
+// WSTransport satisfied the net.Conn interface by wrapping the websocket.Conn
+type WSTransport struct {
+	conn *websocket.Conn
+	r io.Reader // it has to save the reader because websocket.Conn forces you to reuse readers
+}
+
+// Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway. 
+func (wst *WSTransport) Read(b []byte) (n int, err error) {
+	if wst.r == nil {
+		var mt int
+		mt, r, err := wst.conn.NextReader() // Errors from here are fatal, connection must be reset
+		if err != nil {
+			if websocket.IsCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseAbnormalClosure,
+			) {
+				return 0, err // TODO: probably want to translate close 
+			}
+			return 0, err // What other errors are we dealing with?
+		}
+		if mt != websocket.BinaryMessage {
+			// TODO: should this be fatal? What do w/ other messages
+			var mtStr string
+			if mt == 1 {
+				mtStr = "TextMessage"
+			} else if mt == 2 {
+				mtStr = "BinaryMessage"
+			} else if mt == 8 {
+				mtStr = "CloseMessage"
+			} else if mt == 9 {
+			  mtStr = "PingMessage"
+			} else if mt == 10 {
+				mtStr = "PongMessage"
+			}
+			log.Fatalf("sshoverws.WSTransport.Read() received a non-binary message: %s\n", mtStr)
+		}
+		wst.r = r
+	}
+	n, err = wst.r.Read(b) // Read errors are not stated to be fatal but except for EOF seem pretty screwed
+	log.Printf(">Read: %d, %s", n, err)
+	if err != nil {
+		if err == io.EOF { // Not sure what else it could be, check to see if fatal
+			err = nil
+		}
+		wst.r = nil
+	}
+	return n, err 
+}
+
+// Write does a write but facilitates getting a reader
 func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	wc, err := wst.conn.NextWriter(websocket.BinaryMessage)
 	if (err != nil) {
@@ -62,35 +89,87 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	err = wc.Close()
 	return n, err
 }
+
+// Close is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) Close() error {
 	log.Printf("Trying to close")
 	return wst.conn.Close()
 }
+
+// LocalAddr is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) LocalAddr() net.Addr {
-	// TODO UNIMPLEMENTED
-	return &WSAddress{host:"example"}
+	return wst.conn.LocalAddr()
 }
+
+// RemoteAddr is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) RemoteAddr() net.Addr {
-	// TODO UNIMPLEMENTED
-	return &WSAddress{host:"example"}
+	return wst.conn.RemoteAddr()
 }
+
+// SetDeadline is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) SetDeadline(t time.Time) error {
-	// TODO UNIMPLEMENTED
-	return nil
+	if err := wst.SetReadDeadline(t); err != nil {
+		return err
+	}
+	return wst.SetWriteDeadline(t)
 }
+
+// SetReadDeadline is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) SetReadDeadline(t time.Time) error {
-	// TODO UNIMPLEMENTED
-	return nil
+	return wst.conn.SetReadDeadline(t)
 }
+
+// SetWriteDeadline is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) SetWriteDeadline(t time.Time) error {
-	// TODO UNIMPLEMENTED
-	return nil
+	return wst.conn.SetWriteDeadline(t)
+}
+
+// Probably not the best way to provide this, but I can't figure out why exactly besides aesthetic. It does make the API easier.
+// Question is: will client need access to upgrader? Don't want to try and replace 
+var upgrader websocket.Upgrader
+
+func init() {
+	upgrader = websocket.Upgrader{
+		ReadBufferSize:   1024, // is it reasonable size? how do we tune
+		WriteBufferSize:  1024,
+		HandshakeTimeout: 10*time.Second,
+		CheckOrigin: func(r *http.Request) bool {
+			return true // so this basically allows requests from any origin? okay...
+		},
+	}
 }
 
 func Upgrade(w http.ResponseWriter, r *http.Request) (*WSTransport, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	return WrapConn(conn), err
 }
-func WrapConn(conn *websocket.Conn) *WSTransport {
-	return &WSTransport{conn:conn}
+
+// Dial wraps websockets.dial
+func Dial(urlStr string, requestHeader http.Header) (*WSTransport, *http.Response, error) {
+	dialer := websocket.Dialer{}
+	conn, resp, err := dialer.Dial(urlStr, requestHeader)
+	if err != nil {
+		log.Printf("sshoverws.Dial(): dialer.Dial error: %s", err)
+		return nil, nil, err
+	}
+	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
 }
+
+// DialContext wraps websockets.DialContext
+func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) (*WSTransport, *http.Response, error) {
+	dialer := websocket.Dialer{}
+	conn, resp, err := dialer.DialContext(ctx, urlStr, requestHeader)
+	if err != nil {
+		log.Printf("sshoverws.DialContext(): dialer.DialContext error: %s", err)
+		return nil, nil, err
+	}
+	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
+}
+
+// WrapConn takes a websockets connection and makes it a proper stream. Helper functions are provided (dial, upgrade)
+func WrapConn(conn *websocket.Conn) *WSTransport {
+	// I guess we get net.Addr from here
+	return &WSTransport{conn:conn, r:nil}
+}
+
+
