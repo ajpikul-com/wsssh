@@ -5,9 +5,10 @@ import (
 	"log"
 	"io/ioutil"
 	"net/http"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/gorilla/websocket"
-	"github.com/mangodx/AccessTunnel/sshoverws"
+	"github.com/ayjayt/AccessTunnel/sshoverws"
 )
 
 func dialError(url string, resp *http.Response, err error) {
@@ -27,7 +28,23 @@ func dialError(url string, resp *http.Response, err error) {
 }
 
 func main() {
-	log.Printf("Here")
+	config := &ssh.ServerConfig{
+		NoClientAuth: true,
+	}
+
+	privateBytes, err := ioutil.ReadFile("/home/ajp/.ssh/id_ed25519")
+	if err != nil {
+		log.Fatalf("You must set a proper hostkey with -hostkey")
+	}
+
+	private, err := ssh.ParsePrivateKey(privateBytes)
+	if err != nil {
+		log.Fatalf("Failed to parse private key")
+	}
+
+	config.AddHostKey(private)
+
+	log.Printf("Starting dialer")
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	dialer := websocket.Dialer{}
@@ -36,7 +53,25 @@ func main() {
 	if err != nil {
 		log.Printf("Err (%s)", err)
 	}
-	dialError("houston.osoximeter.com", resp, err)
+	log.Printf("Dialed no error")
+	if err != nil {
+		dialError("houston.osoximeter.com", resp, err)
+	}
+
 	ioConn := sshoverws.WrapConn(conn)
+
 	defer ioConn.Close()
+	log.Printf("Starting ssh")
+	sshConn, chans, reqs, err := ssh.NewServerConn(ioConn, config)
+	if err != nil {
+		log.Printf("Failed to handshake (%s)", err)
+		return
+	}
+
+	log.Printf("New SSH cnx from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
+		// Discard all global out-of-band requests
+	go ssh.DiscardRequests(reqs)
+		// Accept all channels
+	go handleChannels(chans)
+	sshConn.Wait()
 }
