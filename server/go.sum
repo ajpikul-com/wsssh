@@ -1,4 +1,6 @@
-github.com/ayjayt/AccessTunnel v0.0.0-20200613205702-74962ace7568 h1:mMoNvlEMGZxqLQHpz3TUoKOyAb0mL1nLnPY+oJQQaag=
+github.com/ayjayt/AccessTunnel v0.0.0-20210115232543-6df2ba5b3fc6 h1:kBTyfrXhtaVU3FJaWQqeaVgwDMyrBoNBUnlbV73hsn0=
+github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210115232543-6df2ba5b3fc6 h1:6owu5s6jqXpIgjqVPuB0qr5vAic0OsMQsMc3HxS7wMo=
+github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210115232543-6df2ba5b3fc6/go.mod h1:61D+Z3JDT41YUfb9t+BWyjC2VgvVx/MWW90JiAkq2SU=
 github.com/ayjayt/ilog v0.0.0-20210115032610-15372227e4a5 h1:8TCIjIcCq/vpK9zRTUalo9X73Nflq42vA6KilKV+dds=
 github.com/ayjayt/ilog v0.0.0-20210115032610-15372227e4a5/go.mod h1:NXhVB+mkbUyvITtPgbwyZNjcb7p2qd/WRYK6KaJ87UU=
 github.com/creack/pty v1.1.7/go.mod h1:lj5s0c3V2DBrqTV7llrYr5NG6My20zk30Fl46Y7DoTY=
@@ -7,6 +9,7 @@ github.com/creack/pty v1.1.11/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gorilla/mux v1.7.4 h1:VuZ8uybHlWmqV03+zRzdwKL4tUnIp1MAQtp1mIFE1bc=
 github.com/gorilla/mux v1.7.4/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
+github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
