@@ -52,7 +52,7 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	})
 	defer conn.Close()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go handleProxy ssh.NewClientConn err: " + err)
+		defaultLogger.Error("AccessTunnel/server/main.go handleProxy ssh.NewClientConn err: " + err.Error())
 		return // TODO: A way to close conn w/ message? Multiplex over one message. 
 					 // Client COULD be set to accept text... not binary... as well. // Assumes websockets is up
 	}
@@ -61,7 +61,7 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	defaultLogger.Info("Start Session") // Set's up one sessions
 	session, err := sshClient.NewSession()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go sshClient.NewSession() err: " + err)
+		defaultLogger.Error("AccessTunnel/server/main.go sshClient.NewSession() err: " + err.Error())
 		return
 	}
 	defer session.Close()
@@ -69,7 +69,7 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	defaultLogger.Info("Calling Shell")
 	err = session.Shell()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go sshClient.Session.Shell() err: " + err)
+		defaultLogger.Error("AccessTunnel/server/main.go sshClient.Session.Shell() err: " + err.Error())
 		return
 	}
 	defaultLogger.Info("Shell up")
@@ -86,6 +86,7 @@ func main(){
 		WriteTimeout:	10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	log.Fatal(s.ListenAndServe()) // TODO: Split this up
+	err := s.ListenAndServe()
+	defaultLogger.Error("AccessTunnel/server/main.go main http.Server.ListenAndServer err: " + err.Error())
 }
 
