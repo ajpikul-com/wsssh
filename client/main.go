@@ -2,73 +2,89 @@ package main
 
 import (
 	"context"
-	"log"
 	"io/ioutil"
+	"strconv"
 	"net/http"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/ayjayt/ilog"
 	"github.com/gorilla/websocket"
 	"github.com/ayjayt/AccessTunnel/sshoverws"
 )
 
+var defaultLogger ilog.LoggerInterface
+
+func init(){
+	defaultLogger = new(ilog.ZapWrap)
+	err := defaultLogger.Init()
+	if err != nil {
+		panic(err)
+	}
+	sshoverws.SetDefaultLogger(defaultLogger)
+}
+
+// dialError dumps the boddy in case of an error
 func dialError(url string, resp *http.Response, err error) {
 	if resp != nil {
 		extra := ""
-		if true {
 			b, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.Printf("Failed to read HTTP body: %v", err)
+				defaultLogger.Error("Failed to read HTTP body: "+ err.Error())
+				// return ?
 			}
 			extra = "Body:\n" + string(b)
-		}
-		log.Printf("%s: HTTP error: %d %s\n%s", err, resp.StatusCode, resp.Status, extra)
+		defaultLogger.Info(err.Error() + ": HTTP error: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra)
 
 	}
-	log.Printf("Dial to %q fail: %v", url, err)
+	defaultLogger.Error("Dial to " + url + " fail: " + err.Error())
 }
 
 func main() {
 	config := &ssh.ServerConfig{
-		NoClientAuth: true,
+		NoClientAuth: true, // TODO lol what but wait
 	}
 
 	privateBytes, err := ioutil.ReadFile("/home/ajp/.ssh/id_ed25519")
 	if err != nil {
-		log.Fatalf("You must set a proper hostkey with -hostkey")
+		defaultLogger.Error("You must set a proper hostkey with -hostkey")
+		return
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Fatalf("Failed to parse private key")
+		defaultLogger.Error("Failed to parse private key")
+		return
 	}
 
 	config.AddHostKey(private)
 
-	log.Printf("Starting dialer")
+
+	// Doing a lot of stuff manually w/ websockets - the API (sshoverws) can do this but I like dialError
+	defaultLogger.Info("Starting dialer")
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	dialer := websocket.Dialer{}
-	log.Printf("Made dialer")
-	conn, resp, err := dialer.Dial("ws://houston.osoximeter.com",nil)
+	defaultLogger.Info("Made dialer")
+	conn, resp, err := dialer.Dial("ws://houston.osoximeter.com:2223",nil)
 	if err != nil {
-		log.Printf("Err (%s)", err)
+		defaultLogger.Error("Err: " + err.Error())
 	}
-	log.Printf("Dialed no error")
+	defaultLogger.Error("Dialed no error")
 	if err != nil {
 		dialError("houston.osoximeter.com", resp, err)
 	}
-
 	ioConn := sshoverws.WrapConn(conn)
-
 	defer ioConn.Close()
-	log.Printf("Starting ssh")
+
+	// Now Starting SSH
+	defaultLogger.Error("Starting ssh")
 	sshConn, chans, reqs, err := ssh.NewServerConn(ioConn, config)
 	if err != nil {
-		log.Printf("Failed to handshake (%s)", err)
+		defaultLogger.Error("Failed to handshake " + err.Error())
 		return
 	}
 
-	log.Printf("New SSH cnx from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
+	defaultLogger.Info("New SSH cnx from " + sshConn.RemoteAddr().String() +" " + string(sshConn.ClientVersion() ) )
 		// Discard all global out-of-band requests
 	go ssh.DiscardRequests(reqs)
 		// Accept all channels

@@ -1,10 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
-	"net"
-	"fmt"
 	"encoding/binary"
 	"io"
 	"os/exec"
@@ -16,52 +12,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func runSSHD(port string) {
-	var hostPrivateKey *string
-	panic("Asbolutely do not do this")
-	config := &ssh.ServerConfig{
-		NoClientAuth: true,
-	}
-	privateBytes, err := ioutil.ReadFile(*hostPrivateKey)
-	if err != nil {
-		log.Fatalf("You must set a proper hostkey with -hostkey")
-	}
-
-	private, err := ssh.ParsePrivateKey(privateBytes)
-	if err != nil {
-		log.Fatalf("Failed to parse private key")
-	}
-
-	config.AddHostKey(private)
-
-	listener, err := net.Listen("tcp", "0.0.0.0:"+port)
-	if err != nil {
-		log.Fatalf("Couldn't open port %s: %s", port, err)
-	}
-
-	log.Printf("Opening port %s", port)
-	for {
-		tcpConn, err := listener.Accept()
-		if err != nil {
-			log.Printf("Failed to accept a request (%s)", err)
-			continue
-		}
-		sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, config)
-		if err != nil {
-			log.Printf("Failed to handshake (%s)", err)
-			continue
-		}
-
-		log.Printf("New SSH cnx from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
-
-		// Discard all global out-of-band requests
-		go ssh.DiscardRequests(reqs)
-		// Accept all channels
-		go handleChannels(chans)
-	}
-
-}
-
 func handleChannels(chans <-chan ssh.NewChannel) {
 	for newChannel := range chans {
 		go handleChannel(newChannel)
@@ -70,7 +20,7 @@ func handleChannels(chans <-chan ssh.NewChannel) {
 
 func handleChannel(newChannel ssh.NewChannel) {
 	if t := newChannel.ChannelType(); t != "session" {
-		newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
+		newChannel.Reject(ssh.UnknownChannelType, "unknown channel type: " + t)
 		return
 	}
 
@@ -78,12 +28,12 @@ func handleChannel(newChannel ssh.NewChannel) {
 	// request for another logical connection
 	connection, requests, err := newChannel.Accept()
 	if err != nil {
-		log.Printf("Could not accept channel (%s)", err)
+		defaultLogger.Error("Could not accept channel: "+ err.Error())
 		return
 	}
 
 	// BASH
-	log.Printf("Executing bash")
+	defaultLogger.Info("Executing bash")
 	bash := exec.Command("bash")
 
 	// Prep Close
@@ -91,16 +41,16 @@ func handleChannel(newChannel ssh.NewChannel) {
 		connection.Close()
 		_, err := bash.Process.Wait()
 		if err != nil {
-			log.Printf("Failed to exit bash (%s)", err)
+			defaultLogger.Error("Failed to exit bash (" + err.Error() + ")")
 		}
-		log.Printf("Session closed")
+		defaultLogger.Info("Session closed")
 	}
 
 	// Allocate a terminal for this channel
-	log.Print("Creating pty...")
+	defaultLogger.Info("Creating pty...")
 	bashf, err := pty.Start(bash)
 	if err != nil {
-		log.Printf("Could not start pty (%s)", err)
+		defaultLogger.Error("Could not start pty ("+ err.Error()+")")
 		close()
 		return
 	}
