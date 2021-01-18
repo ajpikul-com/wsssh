@@ -15,7 +15,7 @@ import (
 var defaultLogger ilog.LoggerInterface
 
 func init(){
-	defaultLogger = new(ilog.ZapWrap)
+	defaultLogger = new(ilog.SimpleLogger)
 	err := defaultLogger.Init()
 	if err != nil {
 		panic(err)
@@ -29,14 +29,13 @@ func dialError(url string, resp *http.Response, err error) {
 		extra := ""
 			b, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				defaultLogger.Error("Failed to read HTTP body: "+ err.Error())
+				defaultLogger.Error("AccessTunnel/client/main.go dialError/ioutil.ReadAll: Failed to read HTTP body: "+ err.Error())
 				// return ?
 			}
 			extra = "Body:\n" + string(b)
-		defaultLogger.Info(err.Error() + ": HTTP error: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra)
+			defaultLogger.Info("INFO: HTTP Response Info:\n" + err.Error() + ": HTTP error: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra)
 
 	}
-	defaultLogger.Error("Dial to " + url + " fail: " + err.Error())
 }
 
 func main() {
@@ -46,13 +45,13 @@ func main() {
 
 	privateBytes, err := ioutil.ReadFile("/home/ajp/.ssh/id_ed25519")
 	if err != nil {
-		defaultLogger.Error("You must set a proper hostkey with -hostkey")
+		defaultLogger.Error("AccessTunnel/client/main.go ioutil.ReadFile: You must set a proper hostkey with -hostkey: " + err.Error())
 		return
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		defaultLogger.Error("Failed to parse private key")
+		defaultLogger.Error("AccessTunnel/client/main.go ssh.ParsePrivateKey: Failed to parse private key: " + err.Error())
 		return
 	}
 
@@ -60,34 +59,36 @@ func main() {
 
 
 	// Doing a lot of stuff manually w/ websockets - the API (sshoverws) can do this but I like dialError
-	defaultLogger.Info("Starting dialer")
+	defaultLogger.Info("INFO: Initializing websockets dialer")
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	dialer := websocket.Dialer{}
-	defaultLogger.Info("Made dialer")
-	conn, resp, err := dialer.Dial("ws://houston.osoximeter.com:2223",nil)
+	defaultLogger.Info("INFO: Made websockets dialer and dialing")
+	conn, resp, err := dialer.Dial("ws://127.0.0.1:2223",nil)
 	if err != nil {
-		defaultLogger.Error("Err: " + err.Error())
-	}
-	defaultLogger.Error("Dialed no error")
-	if err != nil {
+		defaultLogger.Error("AccessTunnel/client/main.go websocket.Dialier.Dial: Dial to " + url + " fail: " + err.Error())
 		dialError("houston.osoximeter.com", resp, err)
+		return
 	}
+	defaultLogger.Error("INFO: Dialed no error, wrapping websockets connection")
 	ioConn := sshoverws.WrapConn(conn)
 	defer ioConn.Close()
 
 	// Now Starting SSH
-	defaultLogger.Error("Starting ssh")
+	defaultLogger.Error("INFO: Starting SSH server over wrapped websockets connection")
 	sshConn, chans, reqs, err := ssh.NewServerConn(ioConn, config)
 	if err != nil {
-		defaultLogger.Error("Failed to handshake " + err.Error())
+		defaultLogger.Error("AccessTunnel/client/main.go Failed to handshake " + err.Error())
 		return
 	}
 
-	defaultLogger.Info("New SSH cnx from " + sshConn.RemoteAddr().String() +" " + string(sshConn.ClientVersion() ) )
-		// Discard all global out-of-band requests
+	defaultLogger.Info("INFO: ssh.NewServerConn returned: " + sshConn.RemoteAddr().String() +" " + string(sshConn.ClientVersion() ) )
+	// Discard all global out-of-band requests
+	defaultLogger.Info("INFO: Running DiscardRequests as a goroutine")
 	go ssh.DiscardRequests(reqs)
-		// Accept all channels
+	// Accept all channels
+	defaultLogger.Info("INFO: Running handleChannels as a goroutine")
 	go handleChannels(chans)
+	defaultLogger.Info("INFO: Calling sshConn.Wait()")
 	sshConn.Wait()
 }
