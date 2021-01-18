@@ -64,10 +64,11 @@ func main() {
 	defer cancel()
 	dialer := websocket.Dialer{}
 	defaultLogger.Info("INFO: Made websockets dialer and dialing")
-	conn, resp, err := dialer.Dial("ws://127.0.0.1:2223",nil)
+	url := "ws://127.0.0.1:2223"
+	conn, resp, err := dialer.Dial(url,nil)
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/client/main.go websocket.Dialier.Dial: Dial to " + url + " fail: " + err.Error())
-		dialError("houston.osoximeter.com", resp, err)
+		defaultLogger.Error("AccessTunnel/client/main.go websocket.Dialier.Dial: Dial fail: " + err.Error())
+		dialError(url, resp, err)
 		return
 	}
 	defaultLogger.Error("INFO: Dialed no error, wrapping websockets connection")
