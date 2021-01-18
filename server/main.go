@@ -65,7 +65,8 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer session.Close()
-	// Do I need to request psuedoterminal?
+	// Do I need to request psuedoterminal? 
+	// What does this do without it?
 	defaultLogger.Info("Calling Shell")
 	err = session.Shell()
 	if err != nil {

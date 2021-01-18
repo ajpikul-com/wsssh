@@ -106,7 +106,7 @@ func handleChannel(newChannel ssh.NewChannel) {
 	// pipe sessions to pty and vis-a-versa
 	var once sync.Once
 	go func() {
-		io.Copy(connection, bashf)
+		io.Copy(connection, bashf) // so this is uh..  the right message type
 		once.Do(close)
 	}()
 	go func() {
@@ -115,14 +115,14 @@ func handleChannel(newChannel ssh.NewChannel) {
 	}()
 
 	go func() {
-		for req := range requests {
+		for req := range requests { // what if it requests a new channel? // Can't request channels on channels
 			switch req.Type {
-			case "shell":
+			case "shell": // Subsystem?
 				// We only accept default shell, no command in payload
 				if len(req.Payload) == 0 {
 					req.Reply(true, nil)
 				}
-			case "pty-req":
+			case "pty-req": // this is where we start bash
 				termLen := req.Payload[3]
 				w, h:= parseDims(req.Payload[termLen+4:])
 				SetWinsize(bashf.Fd(), w, h)
@@ -145,9 +145,9 @@ func parseDims(b []byte) (uint32, uint32) {
 // Winsize stores the Height and Width of a terminal.
 type Winsize struct {
 	Height	uint16
-	Width		uint16
-	x				uint16 // unused
-	y				uint16 // unused
+	Width	uint16
+	x	uint16 // unused
+	y	uint16 // unused
 }
 
 // SetWinsize sets the size of the given pty.

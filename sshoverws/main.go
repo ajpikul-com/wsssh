@@ -79,6 +79,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 }
 
 // Write does a write but facilitates getting a reader
+// This needs to be single threaded right?
 func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	wc, err := wst.conn.NextWriter(websocket.BinaryMessage)
 	if (err != nil) {
