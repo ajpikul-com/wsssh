@@ -13,6 +13,7 @@ import (
 )
 
 func handleChannels(chans <-chan ssh.NewChannel) {
+	defaultLogger.Info("INFO: handleChannels: new Channel received")
 	for newChannel := range chans {
 		go handleChannel(newChannel)
 	}
@@ -21,36 +22,40 @@ func handleChannels(chans <-chan ssh.NewChannel) {
 func handleChannel(newChannel ssh.NewChannel) {
 	if t := newChannel.ChannelType(); t != "session" {
 		newChannel.Reject(ssh.UnknownChannelType, "unknown channel type: " + t)
+		defaultLogger.Info("INFO: Channel rejected: " + newChannel.ChannelType())
 		return
 	}
 
 	// At this point, we have the opportunity to reject the client's
 	// request for another logical connection
+	defaultLogger.Info("INFO: Accepting a channel")
 	connection, requests, err := newChannel.Accept()
 	if err != nil {
-		defaultLogger.Error("Could not accept channel: "+ err.Error())
+		defaultLogger.Error("AccessTunnel/client/sshd.go ssh.NewChannel.Accept(): " + err.Error())
 		return
 	}
 
 	// BASH
-	defaultLogger.Info("Executing bash")
+	defaultLogger.Info("INFO: Executing bash")
 	bash := exec.Command("bash")
 
 	// Prep Close
 	close := func() {
+		defaultLogger.Info("INFO: In close lambda and closing channel connection")
 		connection.Close()
+		defaultLogger.Info("INFO: Bash.Process.Wait()")
 		_, err := bash.Process.Wait()
 		if err != nil {
-			defaultLogger.Error("Failed to exit bash (" + err.Error() + ")")
+			defaultLogger.Error("AccessTunnel/client/sshd.org handleChannel/bash.Process.Wait:" + err.Error())
 		}
-		defaultLogger.Info("Session closed")
+		defaultLogger.Info("INFO: Session closed")
 	}
 
 	// Allocate a terminal for this channel
-	defaultLogger.Info("Creating pty...")
+	defaultLogger.Info("INFO: Creating pty...")
 	bashf, err := pty.Start(bash)
 	if err != nil {
-		defaultLogger.Error("Could not start pty ("+ err.Error()+")")
+		defaultLogger.Error("AccessTunnel/client/sshd.go pty.Start(): "+ err.Error())
 		close()
 		return
 	}
@@ -58,16 +63,21 @@ func handleChannel(newChannel ssh.NewChannel) {
 	// pipe sessions to pty and vis-a-versa
 	var once sync.Once
 	go func() {
+		defaultLogger.Info("INFO: Copying channel to bash")
 		io.Copy(connection, bashf)
+		defaultLogger.Info("INFO: Copied channel to bash")
 		once.Do(close)
 	}()
 	go func() {
+		defaultLogger.Info("INFO: Copying bash to channel")
 		io.Copy(bashf, connection)
+		defaultLogger.Info("INFO: Copied bash to channel")
 		once.Do(close)
 	}()
 
 	go func() {
 		for req := range requests {
+			defaultLogger.Info("INFO: Request received: " + req.Type)
 			switch req.Type {
 			case "shell":
 				// We only accept default shell, no command in payload
