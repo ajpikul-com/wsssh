@@ -19,7 +19,7 @@ var defaultLogger ilog.LoggerInterface
 
 
 func init(){
-	defaultLogger = new(ilog.ZapWrap)
+	defaultLogger = new(ilog.SimpleLogger)
 	err := defaultLogger.Init()
 	if err != nil {
 		panic(err)
@@ -43,7 +43,7 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	defaultLogger.Info("Setting up new ClientConn to the edge device")
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, "device", &ssh.ClientConfig{
-		User: "",
+		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			// key is the hosts public key, which has already been certified
 			defaultLogger.Info("Hostname: " + hostname + ", remote: " + remote.Network())
@@ -87,6 +87,7 @@ func main(){
 		WriteTimeout:	10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
+	defaultLogger.Info("Serving!")
 	err := s.ListenAndServe()
 	defaultLogger.Error("AccessTunnel/server/main.go main http.Server.ListenAndServer err: " + err.Error())
 }
