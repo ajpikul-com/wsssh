@@ -51,7 +51,7 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	defer func() {
-		defailtLogger.Info("INFO: Closing upgrade")
+		defaultLogger.Info("INFO: Closing upgrade")
 		conn.Close()
 	}()
 	if err != nil {
