@@ -79,10 +79,9 @@ func main() {
 	defaultLogger.Error("INFO: Starting SSH server over wrapped websockets connection")
 	sshConn, chans, reqs, err := ssh.NewServerConn(ioConn, config)
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/client/main.go Failed to handshake " + err.Error())
+		defaultLogger.Error("AccessTunnel/client/main.go NewServerConn error: " + err.Error())
 		return
 	}
-
 	defaultLogger.Info("INFO: ssh.NewServerConn returned: " + sshConn.RemoteAddr().String() +" " + string(sshConn.ClientVersion() ) )
 	// Discard all global out-of-band requests
 	defaultLogger.Info("INFO: Running DiscardRequests as a goroutine")
