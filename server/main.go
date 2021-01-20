@@ -41,8 +41,10 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("500 - sumtin broke")) // TODO: not sure if Upgrade writes a response
 		return
 	}
-	defaultLogger.Info("INFO: Setting up new ClientConn to the edge device")
-	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, "device", &ssh.ClientConfig{
+	defaultLogger.Info("INFO: Sleep")
+	time.Sleep(2 * time.Second)
+	defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
+	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			// key is the hosts public key, which has already been certified
@@ -59,8 +61,6 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		return // TODO: A way to close conn w/ message? Multiplex over one message. 
 					 // Client COULD be set to accept text... not binary... as well. // Assumes websockets is up
 	}
-	defaultLogger.Info("INFO: Sleep")
-	time.Sleep(2 * time.Second)
 	defaultLogger.Info("INFO: Setting up new client")
 	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
 	defaultLogger.Info("INFO: Start Session") // Set's up one sessions
