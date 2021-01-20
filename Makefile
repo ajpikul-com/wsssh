@@ -1,8 +1,8 @@
 all: export GOPRIVATE=github.com/ayjayt/AccessTunnel
 all:
-	$(MAKE) -C sshoverws/ || $(error '**ERROR')
-	$(MAKE) -C server/ || $(error '**ERROR')
-	$(MAKE) -C client/ || $(error '**ERROR')
+	$(MAKE) -C sshoverws/ || ( echo '**ERROR'; false )
+	$(MAKE) -C server/ || ( error '**ERROR'; false )
+	$(MAKE) -C client/ || ( error '**ERROR'; false )
 
 run:
 	tmux respawn-window -t :server -k
