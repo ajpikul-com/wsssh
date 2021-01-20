@@ -30,8 +30,9 @@ func SetDefaultLogger(newLogger ilog.LoggerInterface) {
 
 // WSTransport satisfied the net.Conn interface by wrapping the websocket.Conn
 type WSTransport struct {
-	conn *websocket.Conn
+	Conn *websocket.Conn
 	r io.Reader // it has to save the reader because websocket.Conn forces you to reuse readers
+	mt int
 }
 
 // Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway. 
@@ -40,7 +41,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 	if wst.r == nil {
 		defaultLogger.Info("INFO: reader was nil, calling next")
 		var mt int
-		mt, r, err := wst.conn.NextReader() // Errors from here are fatal, connection must be reset
+		mt, r, err := wst.Conn.NextReader() // Errors from here are fatal, connection must be reset
 		if err != nil {
 			if websocket.IsCloseError(err,
 				websocket.CloseNormalClosure,
@@ -52,23 +53,24 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read.NextReader: " + err.Error())
 			return 0, err // What other errors are we dealing with?
 		}
-		if mt != websocket.BinaryMessage {
+		wst.mt = mt
+		wst.r = r
+		if wst.mt != websocket.BinaryMessage {
 			var mtStr string
-			if mt == 1 {
+			if mt == websocket.TextMessage {
 				mtStr = "TextMessage"
-			} else if mt == 2 {
+			} else if mt == websocket.BinaryMessage {
 				mtStr = "BinaryMessage"
-			} else if mt == 8 {
+			} else if mt == websocket.CloseMessage {
 				mtStr = "CloseMessage"
-			} else if mt == 9 {
+			} else if mt == websocket.PingMessage {
 				mtStr = "PingMessage"
-			} else if mt == 10 {
+			} else if mt == websocket.PongMessage {
 				mtStr = "PongMessage"
 			}
 			defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read() received a non-binary message: " + mtStr)
 			return 0, errors.New("Wrong error type received")
 		}
-		wst.r = r
 	}
 	defaultLogger.Info("INFO: Reading from next reader")
 	n, err = wst.r.Read(b) // Read errors are not stated to be fatal but except for EOF seem pretty screwed
@@ -78,7 +80,11 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			err = nil
 		}
 		wst.r = nil
+		wst.mt = 0
 		defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read() received error on read: " + err.Error())
+	}
+	if wst.mt == websocket.TextMessage {
+		return 0, nil // TODO not sure if this is valid
 	}
 	return n, err
 }
@@ -86,7 +92,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 // Write does a write but facilitates getting a reader
 // This needs to be single threaded right?
 func (wst *WSTransport) Write(b []byte) (n int, err error) {
-	wc, err := wst.conn.NextWriter(websocket.BinaryMessage)
+	wc, err := wst.Conn.NextWriter(websocket.BinaryMessage)
 	if (err != nil) {
 		return 0, err
 	}
@@ -101,19 +107,19 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 // Close is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) Close() error {
 	defaultLogger.Info("INFO: Calling sshoverws.WSTransport.Close()")
-	return wst.conn.Close()
+	return wst.Conn.Close()
 }
 
 // LocalAddr is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) LocalAddr() net.Addr {
-	addr := wst.conn.LocalAddr()
+	addr := wst.Conn.LocalAddr()
 	defaultLogger.Info("INFO: Calling sshoverws.WSTransport.LocalAddr()-> " + addr.Network() + ": " + addr.String())
 	return addr
 }
 
 // RemoteAddr is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) RemoteAddr() net.Addr {
-	addr := wst.conn.RemoteAddr()
+	addr := wst.Conn.RemoteAddr()
 	defaultLogger.Info("INFO: Calling sshoverws.WSTransport.RemoteAddr()-> " + addr.Network() + ": " + addr.String())
 	return addr
 }
@@ -204,7 +210,7 @@ func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) 
 func WrapConn(conn *websocket.Conn) *WSTransport {
 	// I guess we get net.Addr from here
 	defaultLogger.Info("INFO: In WrapConn")
-	return &WSTransport{conn:conn, r:nil}
+	return &WSTransport{Conn:conn, r:nil}
 }
 
 

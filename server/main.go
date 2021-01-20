@@ -2,11 +2,11 @@ package main
 
 import (
 	"time"
-	"net"
+	//"net"
 	"net/http"
 	"flag"
 
-	"golang.org/x/crypto/ssh"
+	//"golang.org/x/crypto/ssh"
 
 	"github.com/ayjayt/ilog"
 	"github.com/ayjayt/AccessTunnel/sshoverws"
@@ -49,7 +49,11 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	}()
 	defaultLogger.Info("INFO: Sleep")
 	time.Sleep(4 * time.Second)
-	defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
+	if err := conn.Conn.WriteMessage( 1, []byte("Test Message")); err != nil { // 1 is messagetype TextMessage
+		defaultLogger.Error("Error on test message: " + err.Error())
+		return
+	}
+	/*defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
 	//sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 	sshClientConn, _, _, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
