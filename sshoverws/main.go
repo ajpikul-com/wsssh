@@ -55,7 +55,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 		}
 		wst.mt = mt
 		wst.r = r
-		if wst.mt != websocket.BinaryMessage {
+		if wst.mt > websocket.BinaryMessage {
 			var mtStr string
 			if mt == websocket.TextMessage {
 				mtStr = "TextMessage"
