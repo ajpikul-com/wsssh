@@ -59,6 +59,8 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		return // TODO: A way to close conn w/ message? Multiplex over one message. 
 					 // Client COULD be set to accept text... not binary... as well. // Assumes websockets is up
 	}
+	defaultLogger.Info("INFO: Sleep")
+	time.Sleep(2 * time.Second)
 	defaultLogger.Info("INFO: Setting up new client")
 	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
 	defaultLogger.Info("INFO: Start Session") // Set's up one sessions
