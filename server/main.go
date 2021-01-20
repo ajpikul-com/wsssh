@@ -41,9 +41,15 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("500 - sumtin broke")) // TODO: not sure if Upgrade writes a response
 		return
 	}
+	defer func() {
+		defaultLogger.Info("INFO: Closing upgrade")
+		if err := conn.Close(); err != nil {
+			defaultLogger.Error("AccessTunnel/server/main.go websocket.Conn.Close() err: " + err.Error())
+		}
+	}()
 	defaultLogger.Info("INFO: Sleep")
 	time.Sleep(2 * time.Second)
-	defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
+	/*defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
@@ -51,15 +57,11 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 			defaultLogger.Info("INFO: HostkeyCallback: Hostname: " + hostname + ", remote: " + remote.Network())
 			return nil
 		},
-	})
-	defer func() {
-		defaultLogger.Info("INFO: Closing upgrade")
-		conn.Close()
-	}()
+	})  // this needs to be closed TODO
 	if err != nil {
 		defaultLogger.Error("AccessTunnel/server/main.go handleProxy ssh.NewClientConn err: " + err.Error())
 		return // TODO: A way to close conn w/ message? Multiplex over one message. 
-					 // Client COULD be set to accept text... not binary... as well. // Assumes websockets is up
+			 // Client COULD be set to accept text... not binary... as well. // Assumes websockets is up
 	}
 	defaultLogger.Info("INFO: Setting up new client")
 	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
@@ -79,7 +81,10 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defaultLogger.Info("Shell up")
-	session.Wait()
+	session.Wait()*/
+	defaultLogger.Info("INFO: Sleep")
+	time.Sleep(2 * time.Second)
+	defaultLogger.Info("Didn't do anything")
 }
 
 func main(){
