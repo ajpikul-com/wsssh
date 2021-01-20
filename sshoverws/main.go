@@ -36,7 +36,7 @@ type WSTransport struct {
 
 // Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway. 
 func (wst *WSTransport) Read(b []byte) (n int, err error) {
-	defaultLogger.Info("INFO: WSTransport.Read")
+	defaultLogger.Info("INFO: In WSTransport.Read")
 	if wst.r == nil {
 		defaultLogger.Info("INFO: reader was nil, calling next")
 		var mt int
@@ -70,7 +70,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 		}
 		wst.r = r
 	}
-	defaultLogger.Info("INFO: Reading")
+	defaultLogger.Info("INFO: Reading from next reader")
 	n, err = wst.r.Read(b) // Read errors are not stated to be fatal but except for EOF seem pretty screwed
 	defaultLogger.Info("INFO >Read: " + strconv.Itoa(n) + ", " + err.Error())
 	if err != nil {
