@@ -61,7 +61,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			} else if mt == 8 {
 				mtStr = "CloseMessage"
 			} else if mt == 9 {
-			  mtStr = "PingMessage"
+				mtStr = "PingMessage"
 			} else if mt == 10 {
 				mtStr = "PongMessage"
 			}
@@ -72,7 +72,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 	}
 	defaultLogger.Info("INFO: Reading from next reader")
 	n, err = wst.r.Read(b) // Read errors are not stated to be fatal but except for EOF seem pretty screwed
-	defaultLogger.Info("INFO >Read: " + strconv.Itoa(n) + ", " + err.Error())
+	defaultLogger.Info("INFO >Read: " + strconv.Itoa(n) + "; err: " + err.Error() + "\n" + string(b))
 	if err != nil {
 		if err == io.EOF { // Not sure what else it could be, check to see if fatal
 			err = nil
