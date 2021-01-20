@@ -6,6 +6,8 @@ github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120024753-88fee875e242 h1:X
 github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120024753-88fee875e242/go.mod h1:61D+Z3JDT41YUfb9t+BWyjC2VgvVx/MWW90JiAkq2SU=
 github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120033049-d08de40eb73d h1:/46DpPF3nuy/pZd6UQR437ZSPRelBGH8bmc4C81whEc=
 github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120033049-d08de40eb73d/go.mod h1:61D+Z3JDT41YUfb9t+BWyjC2VgvVx/MWW90JiAkq2SU=
+github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120162653-39b5018e92c9 h1:zNjMN+CZWmkpb6oVO4WKuQ7P0ADpCrCLDVN6iAEgsjw=
+github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120162653-39b5018e92c9/go.mod h1:61D+Z3JDT41YUfb9t+BWyjC2VgvVx/MWW90JiAkq2SU=
 github.com/ayjayt/ilog v0.0.0-20210115032610-15372227e4a5 h1:8TCIjIcCq/vpK9zRTUalo9X73Nflq42vA6KilKV+dds=
 github.com/ayjayt/ilog v0.0.0-20210115032610-15372227e4a5/go.mod h1:NXhVB+mkbUyvITtPgbwyZNjcb7p2qd/WRYK6KaJ87UU=
 github.com/creack/pty v1.1.7 h1:6pwm8kMQKCmgUg0ZHTm5+/YvRK0s3THD/28+T6/kk4A=
@@ -47,6 +49,7 @@ go.uber.org/zap v1.16.0 h1:uFRZXykJGK9lLY4HtgSw44DnIcAM+kRBP7x5m+NpAOM=
 go.uber.org/zap v1.16.0/go.mod h1:MA8QOfq0BHJwdXa996Y4dYkAqRKB8/1K1QMMZVaNZjQ=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
+golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad h1:DN0cp81fZ3njFcrLCytUHRSUkqBjfTo4Tx9RJTWs0EY=
 golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad/go.mod h1:jdWPYTVW3xRLrWPugEBEK3UY2ZEsg3UU495nc5E+M+I=
 golang.org/x/lint v0.0.0-20190930215403-16217165b5de/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
 golang.org/x/mod v0.0.0-20190513183733-4bf6d317e70e/go.mod h1:mXi4GBBbnImb6dmsKGUJ2LatrhH/nqhxcFungHvyanc=

@@ -2,7 +2,7 @@ package main
 
 import (
 	"time"
-//	"net"
+	"net"
 	"net/http"
 	"flag"
 
@@ -50,7 +50,8 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	defaultLogger.Info("INFO: Sleep")
 	time.Sleep(4 * time.Second)
 	defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
-	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
+	//sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
+	sshClientConn, _, _, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			// key is the hosts public key, which has already been certified
