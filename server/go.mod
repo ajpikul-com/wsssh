@@ -3,7 +3,7 @@ module github.com/ayjayt/AccessTunnel/server
 go 1.14
 
 require (
-	github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120032918-24f586cb7c3c
+	github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120033049-d08de40eb73d
 	github.com/ayjayt/ilog v0.0.0-20210115032610-15372227e4a5
 	github.com/creack/pty v1.1.11 // indirect
 	github.com/gorilla/mux v1.8.0

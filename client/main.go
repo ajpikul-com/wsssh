@@ -77,7 +77,7 @@ func main() {
 
 	// Now Starting SSH
 	defaultLogger.Error("INFO: Starting SSH server over wrapped websockets connection")
-	sshConn, chans, reqs, err := ssh.NewServerConn(ioConn, config)
+	sshConn, chans, reqs, err := ssh.NewServerConn(ioConn, config) // TODO: This isn't working
 	if err != nil {
 		defaultLogger.Error("AccessTunnel/client/main.go NewServerConn error: " + err.Error())
 		return

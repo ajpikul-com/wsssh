@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"flag"
 
-//	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/ayjayt/ilog"
 	"github.com/ayjayt/AccessTunnel/sshoverws"
@@ -48,8 +48,8 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	defaultLogger.Info("INFO: Sleep")
-	time.Sleep(2 * time.Second)
-	/*defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
+	time.Sleep(4 * time.Second)
+	defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
@@ -57,13 +57,20 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 			defaultLogger.Info("INFO: HostkeyCallback: Hostname: " + hostname + ", remote: " + remote.Network())
 			return nil
 		},
-	})  // this needs to be closed TODO
+	})
+	defer func() {
+		defaultLogger.Info("INFO: Closing ssh.ClientConn")
+		if err := sshClientConn.Close(); err != nil {
+			defaultLogger.Error("sshClinetConn.Close err: " + err.Error())
+		}
+
+	}()
 	if err != nil {
 		defaultLogger.Error("AccessTunnel/server/main.go handleProxy ssh.NewClientConn err: " + err.Error())
 		return // TODO: A way to close conn w/ message? Multiplex over one message. 
 			 // Client COULD be set to accept text... not binary... as well. // Assumes websockets is up
 	}
-	defaultLogger.Info("INFO: Setting up new client")
+	/*defaultLogger.Info("INFO: Setting up new client")
 	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
 	defaultLogger.Info("INFO: Start Session") // Set's up one sessions
 	session, err := sshClient.NewSession()
@@ -83,7 +90,7 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	defaultLogger.Info("Shell up")
 	session.Wait()*/
 	defaultLogger.Info("INFO: Sleep")
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 	defaultLogger.Info("Didn't do anything")
 }
 
