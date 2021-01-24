@@ -4,6 +4,7 @@ import (
 	"net"
 	"time"
 	"errors"
+	"bytes"
 	"net/http"
 	"context"
 	"strconv"
@@ -25,7 +26,7 @@ func init() {
 // SetDefaultLogger attaches a logger to the lib. See github.com/ayajyt/ilog
 func SetDefaultLogger(newLogger ilog.LoggerInterface) {
 	defaultLogger = newLogger
-	defaultLogger.Info("INFO: Default Logger Set")
+	defaultLogger.Info("INFO: SSHOVERWS: Default Logger Set")
 }
 
 // WSTransport satisfied the net.Conn interface by wrapping the websocket.Conn
@@ -54,34 +55,45 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			return 0, err // What other errors are we dealing with?
 		}
 		wst.mt = mt
-		wst.r = r
+		wst.r = r // TODO DOES THE READER NEED TO BE COPIED? // TODO: What type of reader to websockets actually return on NextReader
+		var mtStr string
+		if mt == websocket.TextMessage {
+			mtStr = "TextMessage"
+		} else if mt == websocket.BinaryMessage {
+			mtStr = "BinaryMessage"
+		} else if mt == websocket.CloseMessage {
+			mtStr = "CloseMessage"
+		} else if mt == websocket.PingMessage {
+			mtStr = "PingMessage"
+		} else if mt == websocket.PongMessage {
+			mtStr = "PongMessage"
+		}
+		defaultLogger.Info("INFO: MessageType: " + mtStr)
 		if wst.mt > websocket.BinaryMessage {
-			var mtStr string
-			if mt == websocket.TextMessage {
-				mtStr = "TextMessage"
-			} else if mt == websocket.BinaryMessage {
-				mtStr = "BinaryMessage"
-			} else if mt == websocket.CloseMessage {
-				mtStr = "CloseMessage"
-			} else if mt == websocket.PingMessage {
-				mtStr = "PingMessage"
-			} else if mt == websocket.PongMessage {
-				mtStr = "PongMessage"
-			}
 			defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read() received a non-binary message: " + mtStr)
 			return 0, errors.New("Wrong error type received")
 		}
 	}
-	defaultLogger.Info("INFO: Reading from next reader")
-	n, err = wst.r.Read(b) // Read errors are not stated to be fatal but except for EOF seem pretty screwed
-	defaultLogger.Info("INFO >Read: " + strconv.Itoa(n) + "; err: " + err.Error() + "\n" + string(b))
+	if wst.mt == websocket.TextMessage {
+		n, err = wst.r.Read(b)
+		// TODO: circular buffer with side messages
+		if err != nil {
+			defaultLogger.Error("Error on read: " + err.Error())
+		}
+	} else {
+		n, err = wst.r.Read(b)
+	}
+	if b !=nil{
+		defaultLogger.Info("INFO >Read: (amount=" + strconv.Itoa(n) + ")\n" + strconv.Quote(string(bytes.Trim(b, "\x00"))))
+	}
 	if err != nil {
 		if err == io.EOF { // Not sure what else it could be, check to see if fatal
 			err = nil
+		} else {
+			defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read() received error on read: " + err.Error())
 		}
 		wst.r = nil
 		wst.mt = 0
-		defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read() received error on read: " + err.Error())
 	}
 	if wst.mt == websocket.TextMessage {
 		return 0, nil // TODO not sure if this is valid

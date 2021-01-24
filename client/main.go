@@ -33,7 +33,7 @@ func dialError(url string, resp *http.Response, err error) {
 				// return ?
 			}
 			extra = "Body:\n" + string(b)
-			defaultLogger.Info("INFO: HTTP Response Info:\n" + err.Error() + ": HTTP error: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra)
+			defaultLogger.Info("INFO: HTTP Response Info: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra)
 
 	}
 }
@@ -71,12 +71,12 @@ func main() {
 		dialError(url, resp, err)
 		return
 	}
-	defaultLogger.Error("INFO: Dialed no error, wrapping websockets connection")
+	defaultLogger.Info("INFO: Dialed no error, wrapping websockets connection")
 	ioConn := sshoverws.WrapConn(conn)
 	defer ioConn.Close()
 
 	// Now Starting SSH
-	defaultLogger.Error("INFO: Starting SSH server over wrapped websockets connection")
+	defaultLogger.Info("INFO: Starting SSH server over wrapped websockets connection")
 	sshConn, chans, reqs, err := ssh.NewServerConn(ioConn, config) // TODO: This isn't working
 	if err != nil {
 		defaultLogger.Error("AccessTunnel/client/main.go NewServerConn error: " + err.Error())
@@ -90,5 +90,8 @@ func main() {
 	defaultLogger.Info("INFO: Running handleChannels as a goroutine")
 	go handleChannels(chans)
 	defaultLogger.Info("INFO: Calling sshConn.Wait()")
-	sshConn.Wait()
+	err = sshConn.Wait()
+	if err != nil {
+		defaultLogger.Error("AccessTunnel/client/main.go sshConn.Wait(): " + err.Error())
+	}
 }

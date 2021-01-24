@@ -2,11 +2,11 @@ package main
 
 import (
 	"time"
-	//"net"
+	"net"
 	"net/http"
 	"flag"
 
-	//"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/ayjayt/ilog"
 	"github.com/ayjayt/AccessTunnel/sshoverws"
@@ -27,8 +27,8 @@ func init(){
 	sshoverws.SetDefaultLogger(defaultLogger)
 	flag.Parse()
 	if (len(*hostPrivateKey) == 0) {
-		defaultLogger.Error("server main.go flags: No host private key set")
-		defaultLogger.Info("Skipping above error since no auth is implemented yet")
+		defaultLogger.Error("Error: server main.go flags: No host private key set")
+		defaultLogger.Info("INFO: Skipping above error since no auth is implemented yet")
 	}
 }
 
@@ -53,9 +53,9 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		defaultLogger.Error("Error on test message: " + err.Error())
 		return
 	}
-	/*defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
-	//sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
-	sshClientConn, _, _, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
+	defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
+	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
+	//sshClientConn, _, _, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			// key is the hosts public key, which has already been certified
@@ -68,14 +68,14 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		if err := sshClientConn.Close(); err != nil {
 			defaultLogger.Error("sshClinetConn.Close err: " + err.Error())
 		}
-
 	}()
 	if err != nil {
 		defaultLogger.Error("AccessTunnel/server/main.go handleProxy ssh.NewClientConn err: " + err.Error())
 		return // TODO: A way to close conn w/ message? Multiplex over one message. 
 			 // Client COULD be set to accept text... not binary... as well. // Assumes websockets is up
 	}
-	/*defaultLogger.Info("INFO: Setting up new client")
+
+	defaultLogger.Info("INFO: Setting up new client")
 	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
 	defaultLogger.Info("INFO: Start Session") // Set's up one sessions
 	session, err := sshClient.NewSession()
@@ -85,17 +85,21 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	defer session.Close()
 	// Do I need to request psuedoterminal? 
-	// What does this do without it?
+	// What does this do without it? (my clients ssh server seems to treat every request like a pty-request)
 	defaultLogger.Info("INFO: Calling Shell")
 	err = session.Shell()
 	if err != nil {
 		defaultLogger.Error("AccessTunnel/server/main.go sshClient.Session.Shell() err: " + err.Error())
 		return
 	}
-	defaultLogger.Info("Shell up")
-	session.Wait()*/
+	defaultLogger.Info("Shell up, setting wait")
+	time.Sleep(10 * time.Second)
+	err = session.Wait()
+	if err != nil {
+		defaultLogger.Error("AccessTunnel/server/main.go session.Wait() err: " + err.Error())
+	}
 	defaultLogger.Info("INFO: Sleep")
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	defaultLogger.Info("Didn't do anything")
 }
 
@@ -109,8 +113,10 @@ func main(){
 		WriteTimeout:	10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	defaultLogger.Info("Serving!")
+	defaultLogger.Info("INFO: Serving!")
 	err := s.ListenAndServe()
-	defaultLogger.Error("AccessTunnel/server/main.go main http.Server.ListenAndServer err: " + err.Error())
+	if err != nil {
+		defaultLogger.Error("AccessTunnel/server/main.go main http.Server.ListenAndServe: " + err.Error())
+	}
 }
 

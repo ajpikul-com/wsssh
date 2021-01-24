@@ -3,7 +3,7 @@ module github.com/ayjayt/AccessTunnel/client
 go 1.14
 
 require (
-	github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120171013-c8a04a9e1047
+	github.com/ayjayt/AccessTunnel/sshoverws v0.0.0-20210120171729-0195b38dc8e9
 	github.com/ayjayt/ilog v0.0.0-20210115032610-15372227e4a5
 	github.com/creack/pty v1.1.11 // indirect
 	github.com/gorilla/websocket v1.4.2
@@ -15,3 +15,4 @@ require (
 )
 
 replace github.com/ayjayt/AccessTunnel/sshoverws => ../sshoverws
+replace github.com/gorilla/websocket => /home/ajp/gohack/github.com/gorilla/websocket

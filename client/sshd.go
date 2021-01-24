@@ -5,21 +5,23 @@ import (
 	"io"
 	"os/exec"
 	"syscall"
-	"sync"
+	//"sync"
+	"strconv"
 	"unsafe"
 
 	"github.com/kr/pty"
 	"golang.org/x/crypto/ssh"
 )
-
+var channelID int = 0
 func handleChannels(chans <-chan ssh.NewChannel) {
-	defaultLogger.Info("INFO: handleChannels: new Channel received")
 	for newChannel := range chans {
-		go handleChannel(newChannel)
+		defaultLogger.Info("INFO: handleChannels: new Channel received")
+		go handleChannel(newChannel, channelID)
+		channelID += 1
 	}
 }
 
-func handleChannel(newChannel ssh.NewChannel) {
+func handleChannel(newChannel ssh.NewChannel, channelID int) {
 	if t := newChannel.ChannelType(); t != "session" {
 		newChannel.Reject(ssh.UnknownChannelType, "unknown channel type: " + t)
 		defaultLogger.Info("INFO: Channel rejected: " + newChannel.ChannelType())
@@ -61,40 +63,38 @@ func handleChannel(newChannel ssh.NewChannel) {
 	}
 
 	// pipe sessions to pty and vis-a-versa
-	var once sync.Once
+	//var once sync.Once
 	go func() {
 		defaultLogger.Info("INFO: Copying channel to bash")
 		io.Copy(connection, bashf)
-		defaultLogger.Info("INFO: Copied channel to bash")
-		once.Do(close)
+		defaultLogger.Info("INFO: Copied channel to bash closing go func channelID " + strconv.Itoa(channelID))
+	//	once.Do(close)
 	}()
 	go func() {
 		defaultLogger.Info("INFO: Copying bash to channel")
 		io.Copy(bashf, connection)
-		defaultLogger.Info("INFO: Copied bash to channel")
-		once.Do(close)
+		defaultLogger.Info("INFO: Copied bash to channel closing go func channelID " + strconv.Itoa(channelID))
+	//	once.Do(close)
 	}()
 
-	go func() {
-		for req := range requests {
-			defaultLogger.Info("INFO: Request received: " + req.Type)
-			switch req.Type {
-			case "shell":
-				// We only accept default shell, no command in payload
-				if len(req.Payload) == 0 {
-					req.Reply(true, nil)
-				}
-			case "pty-req":
-				termLen := req.Payload[3]
-				w, h:= parseDims(req.Payload[termLen+4:])
-				SetWinsize(bashf.Fd(), w, h)
+	for req := range requests {
+		defaultLogger.Info("INFO: Request received: " + req.Type)
+		switch req.Type {
+		case "shell":
+			// We only accept default shell, no command in payload
+			if len(req.Payload) == 0 {
 				req.Reply(true, nil)
-			case "window-change":
-				w, h := parseDims(req.Payload)
-				SetWinsize(bashf.Fd(), w, h)
 			}
+		case "pty-req":
+			termLen := req.Payload[3]
+			w, h:= parseDims(req.Payload[termLen+4:])
+			SetWinsize(bashf.Fd(), w, h)
+			req.Reply(true, nil)
+		case "window-change":
+			w, h := parseDims(req.Payload)
+			SetWinsize(bashf.Fd(), w, h)
 		}
-	}()
+	}
 }
 
 // parseDims extracts terminal dimensions (width x height) from the provided buffer
@@ -107,9 +107,9 @@ func parseDims(b []byte) (uint32, uint32) {
 // Winsize stores the Height and Width of a terminal.
 type Winsize struct {
 	Height	uint16
-	Width		uint16
-	x				uint16 // unused
-	y				uint16 // unused
+	Width	uint16
+	x	uint16 // unused
+	y	uint16 // unused
 }
 
 // SetWinsize sets the size of the given pty.
