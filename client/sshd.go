@@ -15,7 +15,7 @@ import (
 var channelID int = 0
 func handleChannels(chans <-chan ssh.NewChannel) {
 	for newChannel := range chans {
-		defaultLogger.Info("INFO: handleChannels: new Channel received")
+		defaultLogger.Info("handleChannels: new Channel received")
 		go handleChannel(newChannel, channelID)
 		channelID += 1
 	}
@@ -24,40 +24,40 @@ func handleChannels(chans <-chan ssh.NewChannel) {
 func handleChannel(newChannel ssh.NewChannel, channelID int) {
 	if t := newChannel.ChannelType(); t != "session" {
 		newChannel.Reject(ssh.UnknownChannelType, "unknown channel type: " + t)
-		defaultLogger.Info("INFO: Channel rejected: " + newChannel.ChannelType())
+		defaultLogger.Info("Channel rejected by handleChannel: " + newChannel.ChannelType())
 		return
 	}
 
 	// At this point, we have the opportunity to reject the client's
 	// request for another logical connection
-	defaultLogger.Info("INFO: Accepting a channel")
+	defaultLogger.Info("HandleChannels is accepting a channel")
 	connection, requests, err := newChannel.Accept()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/client/sshd.go ssh.NewChannel.Accept(): " + err.Error())
+		defaultLogger.Error("ssh.NewChannel.Accept(): " + err.Error())
 		return
 	}
 
 	// BASH
-	defaultLogger.Info("INFO: Executing bash")
+	defaultLogger.Info("Handle channel is setting up a bash command")
 	bash := exec.Command("bash")
 
 	// Prep Close
 	close := func() {
-		defaultLogger.Info("INFO: In close lambda and closing channel connection")
+		defaultLogger.Info("In close lambda and closing channel connection")
 		connection.Close()
-		defaultLogger.Info("INFO: Bash.Process.Wait()")
+		defaultLogger.Info("Calling Bash.Process.Wait()") // TODO: Is this right? This should close bash.
 		_, err := bash.Process.Wait()
 		if err != nil {
-			defaultLogger.Error("AccessTunnel/client/sshd.org handleChannel/bash.Process.Wait:" + err.Error())
+			defaultLogger.Error("handleChannel/bash.Process.Wait:" + err.Error())
 		}
-		defaultLogger.Info("INFO: Session closed")
+		defaultLogger.Info("Session closed and bash too")
 	}
 
 	// Allocate a terminal for this channel
-	defaultLogger.Info("INFO: Creating pty...")
+	defaultLogger.Info("Creating pty w/ bash attached")
 	bashf, err := pty.Start(bash)
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/client/sshd.go pty.Start(): "+ err.Error())
+		defaultLogger.Error("pty.Start(): "+ err.Error())
 		close()
 		return
 	}
@@ -65,20 +65,20 @@ func handleChannel(newChannel ssh.NewChannel, channelID int) {
 	// pipe sessions to pty and vis-a-versa
 	//var once sync.Once
 	go func() {
-		defaultLogger.Info("INFO: Copying channel to bash")
-		io.Copy(connection, bashf)
-		defaultLogger.Info("INFO: Copied channel to bash closing go func channelID " + strconv.Itoa(channelID))
+		defaultLogger.Info("Copying channel to bash")
+		io.Copy(connection, bashf) // This seems to receive EOF's but I'm not sure why or when. Certainly it shouldn't be done.
+		defaultLogger.Info("Copied channel to bash closing go func channelID " + strconv.Itoa(channelID))
 	//	once.Do(close)
 	}()
 	go func() {
-		defaultLogger.Info("INFO: Copying bash to channel")
+		defaultLogger.Info("Copying bash to channel")
 		io.Copy(bashf, connection)
-		defaultLogger.Info("INFO: Copied bash to channel closing go func channelID " + strconv.Itoa(channelID))
+		defaultLogger.Info("Copied bash to channel closing go func channelID " + strconv.Itoa(channelID))
 	//	once.Do(close)
 	}()
 
 	for req := range requests {
-		defaultLogger.Info("INFO: Request received: " + req.Type)
+		defaultLogger.Info("Request on a channel received: " + req.Type)
 		switch req.Type {
 		case "shell":
 			// We only accept default shell, no command in payload

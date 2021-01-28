@@ -28,64 +28,64 @@ func init(){
 	sshoverws.SetDefaultLogger(defaultLogger)
 	flag.Parse()
 	if (len(*hostPrivateKey) == 0) {
-		defaultLogger.Error("Error: server main.go flags: No host private key set")
-		defaultLogger.Info("INFO: Skipping above error since no auth is implemented yet")
+		defaultLogger.Error("Server main.go flags: No ssh-local private key set")
+		defaultLogger.Info("Skipping private key error since no auth is implemented yet")
 	}
 }
 
 
 func handleProxy(w http.ResponseWriter, r *http.Request) {
-	// Accept websockets connection
-	defaultLogger.Info("INFO: Req: " + r.Host +", " + r.URL.Path) // TODO: So I guess we're taking all paths here?
-	conn, err := sshoverws.Upgrade(w, r) // so it's not a handler
+	defaultLogger.Info("Connection made to handleProxy: Req: " + r.Host +", " + r.URL.Path)
+	conn, err := sshoverws.Upgrade(w, r)
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go handleProxy sshoverws.Upgrade err: " + err.Error())
+		defaultLogger.Error("handleProxy sshoverws.Upgrade: " + err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("500 - sumtin broke")) // TODO: not sure if Upgrade writes a response
+		w.Write([]byte("500 - sumtin broke"))
 		return
 	}
 	defer func() {
-		defaultLogger.Info("INFO: Closing upgrade")
+		defaultLogger.Info("Closing sshoverws connection.")
 		if err := conn.Close(); err != nil {
-			defaultLogger.Error("AccessTunnel/server/main.go websocket.Conn.Close() err: " + err.Error())
+			defaultLogger.Error("sshoverws.WSTransport.Close(): " + err.Error())
 		}
 	}()
 
-	if err = conn.WriteText("Test Text"); err != nil { 
-		defaultLogger.Error("AccessTunnel/server/main.go WriteText(): " + err.Error())
+	if err = conn.WriteText("Test Text"); err != nil {
+		defaultLogger.Error("WriteText(): " + err.Error())
 	}
 
 	// Start the client connection- this is where we identify the client
 	// This is where the globals have been set up.
-	defaultLogger.Info("INFO: Setting an ssh.NewClientConn to the edge device")
+	defaultLogger.Info("Creating an ssh.NewClientConn to the edge device")
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 	//sshClientConn, _, _, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			// key is the hosts public key, which has already been certified
-			defaultLogger.Info("INFO: HostkeyCallback: Hostname: " + hostname + ", remote: " + remote.Network())
+			// the hosts public key was traded by diffee hellman, we've verified that it has the private key
+			// couldn't it just use the public key and then trade a nonce?
+			defaultLogger.Info("HostkeyCallback: Hostname: " + hostname + ", remote: " + remote.Network())
 			return nil
 		},
 	})
-	defer func() {
-		defaultLogger.Info("INFO: Closing ssh.ClientConn")
-		if err := sshClientConn.Close(); err != nil {
-			defaultLogger.Error("sshClinetConn.Close err: " + err.Error())
-		}
-	}()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go handleProxy ssh.NewClientConn err: " + err.Error())
+		defaultLogger.Error("ssh.NewClientConn err: " + err.Error())
 		return
 	}
-	defaultLogger.Info("INFO: Setting up new client")
+	defer func() {
+		defaultLogger.Info("Closing an ssh.ClientConn")
+		if err := sshClientConn.Close(); err != nil {
+			defaultLogger.Error("sshClientConn.Close: " + err.Error())
+		}
+	}()
+	defaultLogger.Info("Setting up new client based on a ssh.ClientConn")
 	sshClient := ssh.NewClient(sshClientConn, chans, reqs)
 
 	// Now we're asking the client for individual channels. We've already asked for a particular user though. Can we multiplex multple NewClientConns over the same websockets transport?
 	// Also, this sets up streams
-	defaultLogger.Info("INFO: Start Session")
+	defaultLogger.Info("Starting a new ssh session")
 	session, err := sshClient.NewSession()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go sshClient.NewSession() err: " + err.Error())
+		defaultLogger.Error("sshClient.NewSession(): " + err.Error())
 		return
 	}
 	defer session.Close()
@@ -95,18 +95,18 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	session.Stdout = os.Stdout
 
 	// All of this basically does reqs
-	defaultLogger.Info("INFO: Calling Shell")
+	defaultLogger.Info("Calling Shell on an ssh session")
 	err = session.Shell()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go sshClient.Session.Shell() err: " + err.Error())
+		defaultLogger.Error("sshClient.Session.Shell(): " + err.Error())
 		return
 	}
 
 	// Waiting just stays here and keeps the connection open. But basically we want to keep this connection open continuously.
-	defaultLogger.Info("Shell up, setting wait")
+	defaultLogger.Info("Setting wait on an ssh session")
 	err = session.Wait()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go session.Wait() err: " + err.Error())
+		defaultLogger.Error("session.Wait(): " + err.Error())
 	}
 }
 
@@ -120,10 +120,10 @@ func main(){
 		WriteTimeout:	10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	defaultLogger.Info("INFO: Serving!")
+	defaultLogger.Info("Serving an http(s) server!")
 	err := s.ListenAndServe()
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/server/main.go main http.Server.ListenAndServe: " + err.Error())
+		defaultLogger.Error("http.Server.ListenAndServe: " + err.Error())
 	}
 }
 

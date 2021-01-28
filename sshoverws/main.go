@@ -26,7 +26,7 @@ func init() {
 // SetDefaultLogger attaches a logger to the lib. See github.com/ayajyt/ilog
 func SetDefaultLogger(newLogger ilog.LoggerInterface) {
 	defaultLogger = newLogger
-	defaultLogger.Info("INFO: SSHOVERWS: Default Logger Set")
+	defaultLogger.Info("Default Logger Set")
 }
 
 // WSTransport satisfied the net.Conn interface by wrapping the websocket.Conn
@@ -38,9 +38,9 @@ type WSTransport struct {
 
 // Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway. 
 func (wst *WSTransport) Read(b []byte) (n int, err error) {
-	defaultLogger.Info("INFO: In WSTransport.Read")
+	defaultLogger.Info("In WSTransport.Read")
 	if wst.r == nil {
-		defaultLogger.Info("INFO: reader was nil, calling next")
+		defaultLogger.Info("WSTransport Reader was nil, calling NextReader()")
 		var mt int
 		mt, r, err := wst.Conn.NextReader() // Errors from here are fatal, connection must be reset
 		if err != nil {
@@ -48,14 +48,14 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 				websocket.CloseNormalClosure,
 				websocket.CloseAbnormalClosure,
 			) {
-				defaultLogger.Info("INFO: WSTransport.NextReader returned close.")
-				return 0, err // TODO: probably want to translate close 
+				defaultLogger.Info("WSTransport.NextReader returned close, so websockets over.")
+				return 0, err
 			}
-			defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read.NextReader: " + err.Error())
-			return 0, err // What other errors are we dealing with?
+			defaultLogger.Error("WSTransport.Read.NextReader(): " + err.Error())
+			return 0, err
 		}
 		wst.mt = mt
-		wst.r = r // TODO DOES THE READER NEED TO BE COPIED? // TODO: What type of reader to websockets actually return on NextReader
+		wst.r = r
 		var mtStr string
 		if mt == websocket.TextMessage {
 			mtStr = "TextMessage"
@@ -68,9 +68,9 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 		} else if mt == websocket.PongMessage {
 			mtStr = "PongMessage"
 		}
-		defaultLogger.Info("INFO: MessageType: " + mtStr)
+		defaultLogger.Info("MessageType from websockets: " + mtStr)
 		if wst.mt > websocket.BinaryMessage {
-			defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read() received a non-binary message: " + mtStr)
+			defaultLogger.Error("WSTransport.Read() received a non-binary/text message: " + mtStr)
 			return 0, errors.New("Wrong error type received")
 		}
 	}
@@ -78,25 +78,25 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 		n, err = wst.r.Read(b)
 		// TODO: circular buffer with side messages
 		if err != nil {
-			defaultLogger.Error("Error on read: " + err.Error())
+			defaultLogger.Error("websocket.NextReader's io.Reader.Read():" + err.Error())
 		}
 	} else {
 		n, err = wst.r.Read(b)
 	}
 	if b !=nil{
-		defaultLogger.Info("INFO >Read: (amount=" + strconv.Itoa(n) + ")\n" + strconv.Quote(string(bytes.Trim(b, "\x00"))))
+		defaultLogger.Info("Packet Received: (amount=" + strconv.Itoa(n) + ")\n" + strconv.Quote(string(bytes.Trim(b, "\x00"))))
 	}
 	if err != nil {
-		if err == io.EOF { // Not sure what else it could be, check to see if fatal
+		if err == io.EOF {
 			err = nil
 		} else {
-			defaultLogger.Error("AccessTunnel/sshoverws/main.go WSTransport.Read() received error on read: " + err.Error())
+			defaultLogger.Error("WSTransport.Read(): " + err.Error())
 		}
 		wst.r = nil
 		wst.mt = 0
 	}
 	if wst.mt == websocket.TextMessage {
-		return 0, nil // TODO not sure if this is valid
+		return 0, nil
 	}
 	return n, err
 }
@@ -104,6 +104,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 // Write does a write but facilitates getting a reader
 // This needs to be single threaded right?
 func (wst *WSTransport) Write(b []byte) (n int, err error) {
+	defaultLogger.Info("WSTransport.Write() called")
 	wc, err := wst.Conn.NextWriter(websocket.BinaryMessage)
 	if (err != nil) {
 		return 0, err
@@ -116,35 +117,44 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	return n, err
 }
 
+func (wst *WSTransport) WriteText(s string) error{
+	defaultLogger.Info("Sending text message via websocket: " + s)
+	var err error = nil
+	if err = wst.Conn.WriteMessage( websocket.TextMessage, []byte(s) ); err != nil {
+		defaultLogger.Error("WSTransport.WriteText(): " + err.Error())
+	}
+	return err
+}
+
 // Close is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) Close() error {
-	defaultLogger.Info("INFO: Calling sshoverws.WSTransport.Close()")
+	defaultLogger.Info("Calling sshoverws.WSTransport.Close()")
 	return wst.Conn.Close()
 }
 
 // LocalAddr is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) LocalAddr() net.Addr {
 	addr := wst.Conn.LocalAddr()
-	defaultLogger.Info("INFO: Calling sshoverws.WSTransport.LocalAddr()-> " + addr.Network() + ": " + addr.String())
+	defaultLogger.Info("Calling sshoverws.WSTransport.LocalAddr()-> " + addr.Network() + ": " + addr.String())
 	return addr
 }
 
 // RemoteAddr is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) RemoteAddr() net.Addr {
 	addr := wst.Conn.RemoteAddr()
-	defaultLogger.Info("INFO: Calling sshoverws.WSTransport.RemoteAddr()-> " + addr.Network() + ": " + addr.String())
+	defaultLogger.Info("Calling sshoverws.WSTransport.RemoteAddr()-> " + addr.Network() + ": " + addr.String())
 	return addr
 }
 
 // SetDeadline is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) SetDeadline(t time.Time) error {
-	defaultLogger.Info("INFO: Calling SetDeadline()")
+	defaultLogger.Info("Calling WSTransport.SetDeadline()")
 	if err := wst.SetReadDeadline(t); err != nil {
-		defaultLogger.Error("AccessTunnel/sshoverws/main.go SetReadDeadline " + err.Error())
+		defaultLogger.Error("SetReadDeadline(): " + err.Error())
 		return err
 	}
 	if err := wst.SetWriteDeadline(t); err != nil {
-		defaultLogger.Error("AccessTunnel/sshoverws/main.go SetWriteDeadline " + err.Error())
+		defaultLogger.Error("SetWriteDeadline(): " + err.Error())
 		return err
 	}
 	return nil
@@ -152,9 +162,9 @@ func (wst *WSTransport) SetDeadline(t time.Time) error {
 
 // SetReadDeadline is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) SetReadDeadline(t time.Time) error {
-	defaultLogger.Info("INFO: Calling SetReadDeadline()")
+	defaultLogger.Info("Calling WSTransport.SetReadDeadline()")
 	if err := wst.SetReadDeadline(t); err != nil {
-		defaultLogger.Error("AccessTunnel/sshoverws/main.go SetReadDeadline " + err.Error())
+		defaultLogger.Error("SetReadDeadline(): " + err.Error())
 		return err
 	}
 	return nil
@@ -162,9 +172,9 @@ func (wst *WSTransport) SetReadDeadline(t time.Time) error {
 
 // SetWriteDeadline is a simple wrap for the underlying websocket.Conn
 func (wst *WSTransport) SetWriteDeadline(t time.Time) error {
-	defaultLogger.Info("INFO: Calling SetWriteDeadline()")
+	defaultLogger.Info("Calling WSTransport.SetWriteDeadline()")
 	if err := wst.SetWriteDeadline(t); err != nil {
-		defaultLogger.Error("AccessTunnel/sshoverws/main.go SetWriteDeadline " + err.Error())
+		defaultLogger.Error("SetWriteDeadline():" + err.Error())
 		return err
 	}
 	return nil
@@ -186,21 +196,21 @@ func init() {
 }
 
 func Upgrade(w http.ResponseWriter, r *http.Request) (*WSTransport, error) {
-	defaultLogger.Info("INFO: Calling Upgrade(w,r)")
+	defaultLogger.Info("Calling WSTransport.Upgrade(w,r)")
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/sshoverws/main.go Upgrade err: " + err.Error())
+		defaultLogger.Error("Upgrade: " + err.Error())
 	}
 	return WrapConn(conn), err
 }
 
 // Dial wraps websockets.dial
 func Dial(urlStr string, requestHeader http.Header) (*WSTransport, *http.Response, error) {
-	defaultLogger.Info("INFO: Calling Dial")
+	defaultLogger.Info("Calling WSTransport.Dial")
 	dialer := websocket.Dialer{}
 	conn, resp, err := dialer.Dial(urlStr, requestHeader)
 	if err != nil {
-		defaultLogger.Error("AccessTunnel/sshoverws.Dial(): dialer.Dial error: " + err.Error())
+		defaultLogger.Error("dialer.Dial: " + err.Error())
 		return nil, nil, err
 	}
 	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
@@ -208,11 +218,11 @@ func Dial(urlStr string, requestHeader http.Header) (*WSTransport, *http.Respons
 
 // DialContext wraps websockets.DialContext
 func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) (*WSTransport, *http.Response, error) {
-	defaultLogger.Info("INFO: Calling DialContext")
+	defaultLogger.Info("Calling WSTransport.DialContext")
 	dialer := websocket.Dialer{}
 	conn, resp, err := dialer.DialContext(ctx, urlStr, requestHeader)
 	if err != nil {
-		defaultLogger.Error("iAccessTunnel/sshoverws.DialContext(): dialer.DialContext error: " + err.Error())
+		defaultLogger.Error("dialer.DialContext: " + err.Error())
 		return nil, nil, err
 	}
 	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
@@ -221,7 +231,7 @@ func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) 
 // WrapConn takes a websockets connection and makes it a proper stream. Helper functions are provided (dial, upgrade)
 func WrapConn(conn *websocket.Conn) *WSTransport {
 	// I guess we get net.Addr from here
-	defaultLogger.Info("INFO: In WrapConn")
+	defaultLogger.Info("In WSTransport.WrapConn")
 	return &WSTransport{Conn:conn, r:nil}
 }
 
