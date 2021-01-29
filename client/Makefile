@@ -2,4 +2,4 @@ all:
 	go get -u
 	go build
 run:
-	./client && sleep infinity
+	clear && reset && ./client && sleep infinity
