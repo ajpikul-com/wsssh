@@ -15,7 +15,8 @@ import (
 var defaultLogger ilog.LoggerInterface
 
 func init(){
-	defaultLogger = new(ilog.SimpleLogger)
+	defaultLogger = new(ilog.ZapWrap)
+	defaultLogger.(*ilog.ZapWrap).Paths = []string{"./client.log"}
 	err := defaultLogger.Init()
 	if err != nil {
 		panic(err)

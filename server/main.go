@@ -20,7 +20,8 @@ var defaultLogger ilog.LoggerInterface
 
 
 func init(){
-	defaultLogger = new(ilog.SimpleLogger)
+	defaultLogger = new(ilog.ZapWrap)
+	defaultLogger.(*ilog.ZapWrap).Paths = []string{"./server.log"}
 	err := defaultLogger.Init()
 	if err != nil {
 		panic(err)
@@ -125,5 +126,6 @@ func main(){
 	if err != nil {
 		defaultLogger.Error("http.Server.ListenAndServe: " + err.Error())
 	}
+	defaultLogger.Info("Done with all on server")
 }
 
