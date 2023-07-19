@@ -1,14 +1,14 @@
-package sshoverws
+package wsconn
 
 import (
-	"net"
-	"time"
-	"errors"
 	"bytes"
-	"net/http"
 	"context"
-	"strconv"
+	"errors"
 	"io"
+	"net"
+	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/ayjayt/ilog"
 
@@ -32,11 +32,11 @@ func SetDefaultLogger(newLogger ilog.LoggerInterface) {
 // WSTransport satisfied the net.Conn interface by wrapping the websocket.Conn
 type WSTransport struct {
 	Conn *websocket.Conn
-	r io.Reader // it has to save the reader because websocket.Conn forces you to reuse readers
-	mt int
+	r    io.Reader // it has to save the reader because websocket.Conn forces you to reuse readers
+	mt   int
 }
 
-// Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway. 
+// Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway.
 func (wst *WSTransport) Read(b []byte) (n int, err error) {
 	defaultLogger.Info("In WSTransport.Read")
 	if wst.r == nil {
@@ -83,7 +83,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 	} else {
 		n, err = wst.r.Read(b)
 	}
-	if b !=nil{
+	if b != nil {
 		defaultLogger.Info("Packet Received: (amount=" + strconv.Itoa(n) + ")\n" + strconv.Quote(string(bytes.Trim(b, "\x00"))))
 	}
 	if err != nil {
@@ -106,7 +106,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	defaultLogger.Info("WSTransport.Write() called")
 	wc, err := wst.Conn.NextWriter(websocket.BinaryMessage)
-	if (err != nil) {
+	if err != nil {
 		return 0, err
 	}
 	n, err = wc.Write(b)
@@ -117,10 +117,10 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	return n, err
 }
 
-func (wst *WSTransport) WriteText(s string) error{
+func (wst *WSTransport) WriteText(s string) error {
 	defaultLogger.Info("Sending text message via websocket: " + s)
 	var err error = nil
-	if err = wst.Conn.WriteMessage( websocket.TextMessage, []byte(s) ); err != nil {
+	if err = wst.Conn.WriteMessage(websocket.TextMessage, []byte(s)); err != nil {
 		defaultLogger.Error("WSTransport.WriteText(): " + err.Error())
 	}
 	return err
@@ -181,14 +181,14 @@ func (wst *WSTransport) SetWriteDeadline(t time.Time) error {
 }
 
 // Probably not the best way to provide this, but I can't figure out why exactly besides aesthetic. It does make the API easier.
-// Question is: will client need access to upgrader? Don't want to try and replace 
+// Question is: will client need access to upgrader? Don't want to try and replace
 var upgrader websocket.Upgrader
 
 func init() {
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:   1024, // is it reasonable size? how do we tune
 		WriteBufferSize:  1024,
-		HandshakeTimeout: 10*time.Second,
+		HandshakeTimeout: 10 * time.Second,
 		CheckOrigin: func(r *http.Request) bool {
 			return true // so this basically allows requests from any origin? okay...
 		},
@@ -232,7 +232,5 @@ func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) 
 func WrapConn(conn *websocket.Conn) *WSTransport {
 	// I guess we get net.Addr from here
 	defaultLogger.Info("In WSTransport.WrapConn")
-	return &WSTransport{Conn:conn, r:nil}
+	return &WSTransport{Conn: conn, r: nil}
 }
-
-

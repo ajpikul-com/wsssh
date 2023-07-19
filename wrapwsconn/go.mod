@@ -1,4 +1,4 @@
-module github.com/ayjayt/AccessTunnel/sshoverws
+module github.com/ayjayt/wsssh/wsconn
 
 go 1.14
 
@@ -9,5 +9,3 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
 )
-
-replace github.com/gorilla/websocket => /home/ajp/gohack/github.com/gorilla/websocket
