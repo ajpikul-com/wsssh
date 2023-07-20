@@ -48,7 +48,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 				websocket.CloseNormalClosure,
 				websocket.CloseAbnormalClosure,
 			) {
-				defaultLogger.Info("wsconn.Read().NextReader(): A Close Return: " + err.Err())
+				defaultLogger.Info("wsconn.Read().NextReader(): A Close Return: " + err.Error())
 				return 0, err
 			}
 			defaultLogger.Error("wsconn.Read().NextReader(): " + err.Error())
