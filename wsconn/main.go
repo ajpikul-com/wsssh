@@ -43,6 +43,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 		defaultLogger.Info("wsconn.Read(): Need new reader, calling NextReader()")
 		var mt int
 		mt, r, err := wst.Conn.NextReader() // Errors from here are fatal, connection must be reset
+		defaultLogger.Info("wsconn.Read(): Got a reader! (Or error)")
 		if err != nil {
 			if websocket.IsCloseError(err,
 				websocket.CloseNormalClosure,
@@ -77,7 +78,9 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			return 0, errors.New("wsconn.Read(): Wrong error type received")
 		}
 	}
+	defaultLogger.Info("wsconn.Read(): calling internal read()")
 	n, err = wst.r.Read(b) // Obnoxiously, b may be filled w/ previous read if error exists
+	defaultLogger.Info("wsconn.Read(): interal read returned()")
 	if err != nil {
 		wst.r = nil // set wst.mt to 0 later after processing
 		if err == io.EOF {
