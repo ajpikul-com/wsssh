@@ -4,7 +4,7 @@ init:
 	cp go.sum go.sum.local || touch go.sum.local
 	cp go.sum go.sum.official || touch go.sum.official
 
-local: *.go
+local: *.go ../wsconn/*.go
 	cp go.mod.local go.mod
 	cp go.sum.local go.sum
 	-GOPROXY=direct go get -u && go mod tidy && go build
@@ -12,7 +12,7 @@ local: *.go
 	cp go.sum go.sum.local
 	touch local
 
-official: *.go
+official: *.go ../wsconn/*.go
 	cp go.mod.official go.mod
 	cp go.sum.official go.sum
 	-GOPROXY=direct go get -u && go mod tidy && go build

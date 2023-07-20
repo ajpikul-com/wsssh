@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ajpikul-com/ilog"
@@ -13,7 +14,7 @@ var defaultLogger ilog.LoggerInterface
 var HostPort string = "127.0.0.1:2223"
 
 func init() {
-	defaultLogger = &ilog.ZapWrap{Sugar: true}
+	defaultLogger = &ilog.SimpleLogger{}
 	err := defaultLogger.Init()
 	if err != nil {
 		panic(err)
@@ -22,17 +23,27 @@ func init() {
 }
 
 func ServeWSConn(w http.ResponseWriter, r *http.Request) {
-	defaultLogger.Info("Incoming: Req: " + r.Host + ", " + r.URL.Path)
+	defaultLogger.Info("Server: Incoming Req: " + r.Host + ", " + r.URL.Path)
 	conn, err := wsconn.Upgrade(w, r)
 	if err != nil {
-		defaultLogger.Error(err.Error())
+		defaultLogger.Error("Server: " + err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	readBuffer := make([]byte, 1024)
+	for n, err := conn.Read(readBuffer); err == nil; n, err = conn.Read(readBuffer) {
+		defaultLogger.Info("Server:")
+		defaultLogger.Info("Server: In read:")
+		defaultLogger.Info("Server: N is: " + strconv.Itoa(n))
+		defaultLogger.Info("Server: " + string(readBuffer[:]))
+		defaultLogger.Info("Server:")
+	}
+
 	defer func() {
-		defaultLogger.Info("Closing WSConn")
+		defaultLogger.Info("Server: Closing WSConn")
 		if err := conn.Close(); err != nil {
-			defaultLogger.Error(err.Error())
+			defaultLogger.Error("Server: " + err.Error())
 		}
 	}()
 }
@@ -47,10 +58,10 @@ func main() {
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	defaultLogger.Info("Serving an http(s) server!")
+	defaultLogger.Info("Server: Initiating server")
 	err := s.ListenAndServe()
 	if err != nil {
-		defaultLogger.Error("http.Server.ListenAndServe: " + err.Error())
+		defaultLogger.Error("Server: http.Server.ListenAndServe: " + err.Error())
 	}
-	defaultLogger.Info("Done with all on server")
+	defaultLogger.Info("Server exiting")
 }
