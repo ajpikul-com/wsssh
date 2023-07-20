@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ayjayt/ilog"
+	"github.com/ajpikul-com/ilog"
 
 	"github.com/gorilla/websocket"
 )
