@@ -31,20 +31,22 @@ func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var n int = 0
 	readBuffer := make([]byte, 1024)
-	for n, err := conn.Read(readBuffer); n != 0; n, err = conn.Read(readBuffer) {
-		defaultLogger.Info("Server:")
-		defaultLogger.Info("Server: In read:")
-		defaultLogger.Info("Server: N is: " + strconv.Itoa(n))
-		defaultLogger.Info("Server: " + string(readBuffer[:])) // this will stop output on on ascii character, but we should use buffer length
-
-		if err != nil { // here we also break on error, couldn't put it in 4 because
-			// I wanted to see the buffer first
-			defaultLogger.Error("Server: Err:" + err.Error())
+	for err == nil {
+		defaultLogger.Info("Server: Starting an inner read")
+		for n, err = conn.Read(readBuffer); n != 0; n, err = conn.Read(readBuffer) {
 			defaultLogger.Info("Server:")
-			break
+			defaultLogger.Info("Server: In read:")
+			defaultLogger.Info("Server: N is: " + strconv.Itoa(n))
+			defaultLogger.Info("Server: " + string(readBuffer[:])) // this will stop output on on ascii character, but we should use buffer length
+			if err != nil {                                        // here we also break on error, couldn't put it in 4 because
+				// I wanted to see the buffer first
+				defaultLogger.Error("Server: BREAK INNER READ Err:" + err.Error())
+				defaultLogger.Info("Server:")
+				break
+			}
 		}
-		defaultLogger.Info("Server:")
 	}
 
 	defer func() {
