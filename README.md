@@ -2,7 +2,8 @@
 
 Undocumented, this is a set of tools to work with ssh + websockets + more
 
-`wscli` can be used to test either `gorilla/websocket` or `wsssh/wsconn`
+`wscli` can be used to test either `gorilla/websocket` or `wsssh/wsconn`. **NOTE** THIS IS AN AWESOME PROJECT BUT IT IS FAR FROM DONE
+
 
 Knowing that websockets has 5 channels: `ping`, `pong`, `close`, `text`, `binary`,
 `wsconn` wraps it so that the `binary` channel is exposed as a `net.Conn` interface,

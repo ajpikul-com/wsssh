@@ -24,3 +24,4 @@ go.sum.local
 go.mod.official
 go.sum.official
 testclient/testclient
+wscli/wscli
