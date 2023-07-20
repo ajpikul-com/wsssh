@@ -38,9 +38,9 @@ type WSTransport struct {
 
 // Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway.
 func (wst *WSTransport) Read(b []byte) (n int, err error) {
-	defaultLogger.Info("In WSTransport.Read")
+	defaultLogger.Info("wsconn.Read()")
 	if wst.r == nil {
-		defaultLogger.Info("WSTransport Reader was nil, calling NextReader()")
+		defaultLogger.Info("wsconn.Read(): Need new reader, calling NextReader()")
 		var mt int
 		mt, r, err := wst.Conn.NextReader() // Errors from here are fatal, connection must be reset
 		if err != nil {
@@ -48,14 +48,16 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 				websocket.CloseNormalClosure,
 				websocket.CloseAbnormalClosure,
 			) {
-				defaultLogger.Info("WSTransport.NextReader returned close, so websockets over.")
+				defaultLogger.Info("wsconn.Read().NextReader(): A Close Return: " + err.Err())
 				return 0, err
 			}
-			defaultLogger.Error("WSTransport.Read.NextReader(): " + err.Error())
+			defaultLogger.Error("wsconn.Read().NextReader(): " + err.Error())
 			return 0, err
 		}
+
 		wst.mt = mt
 		wst.r = r
+
 		var mtStr string
 		if mt == websocket.TextMessage {
 			mtStr = "TextMessage"
@@ -68,43 +70,46 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 		} else if mt == websocket.PongMessage {
 			mtStr = "PongMessage"
 		}
-		defaultLogger.Info("MessageType from websockets: " + mtStr)
+		defaultLogger.Info("wsconn.Read(): MessageType: " + mtStr)
 		if wst.mt > websocket.BinaryMessage {
-			defaultLogger.Error("WSTransport.Read() received a non-binary/text message: " + mtStr)
-			return 0, errors.New("Wrong error type received")
+			defaultLogger.Error("wsconn.Read(): unexpected message type")
+			// is it true we never receive control from NextReader
+			return 0, errors.New("wsconn.Read(): Wrong error type received")
 		}
 	}
-	if wst.mt == websocket.TextMessage {
-		n, err = wst.r.Read(b)
-		// TODO: circular buffer with side messages
-		if err != nil {
-			defaultLogger.Error("websocket.NextReader's io.Reader.Read():" + err.Error())
-		}
-	} else {
-		n, err = wst.r.Read(b)
-	}
+	n, err = wst.r.Read(b)
 	if b != nil {
-		defaultLogger.Info("Packet Received: (amount=" + strconv.Itoa(n) + ")\n" + strconv.Quote(string(bytes.Trim(b, "\x00"))))
+		defaultLogger.Info("wsconn.Read(): Packet Received: (amount=" + strconv.Itoa(n) + ")\n" + strconv.Quote(string(bytes.Trim(b, "\x00"))))
 	}
 	if err != nil {
+		wst.r = nil // set wst.mt to 0 later after processing
 		if err == io.EOF {
+			defaultLogger.Info("wsconn.Read(): reached EOF")
 			err = nil
+			// This is not a real error tha twe want to report from read, it's normal.
+			// We give what we can give, you call again
 		} else {
-			defaultLogger.Error("WSTransport.Read(): " + err.Error())
+			defaultLogger.Error("wsconn.Read(): NextReader's io.Reader.Read() " + err.Error())
 		}
-		wst.r = nil
-		wst.mt = 0
 	}
 	if wst.mt == websocket.TextMessage {
+		// TODO: don't report this directly
+		// Maybe we need seperate ReadText()
+		// Or just dump this all into hooks?
 		return 0, nil
 	}
+
+	if wst.r == nil {
+		wst.mt = 0
+	}
+	// n is better than err for detecting if read is done
+	// but how should the caller loop on this, not sure yet
 	return n, err
 }
 
-// Write does a write but facilitates getting a reader
-// This needs to be single threaded right?
+// Are there race conditions here
 func (wst *WSTransport) Write(b []byte) (n int, err error) {
-	defaultLogger.Info("WSTransport.Write() called")
+	defaultLogger.Info("wsconn.Write(): WSTransport.Write() called")
 	wc, err := wst.Conn.NextWriter(websocket.BinaryMessage)
 	if err != nil {
 		return 0, err
@@ -118,10 +123,10 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 }
 
 func (wst *WSTransport) WriteText(s string) error {
-	defaultLogger.Info("Sending text message via websocket: " + s)
+	defaultLogger.Info("wsconn.WriteText(): Sending text message via websocket: " + s)
 	var err error = nil
 	if err = wst.Conn.WriteMessage(websocket.TextMessage, []byte(s)); err != nil {
-		defaultLogger.Error("WSTransport.WriteText(): " + err.Error())
+		defaultLogger.Error("wsconn.WriteText(): WSTransport.WriteText(): " + err.Error())
 	}
 	return err
 }
