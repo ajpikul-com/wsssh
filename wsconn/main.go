@@ -210,21 +210,6 @@ func (conn *WSConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-// USEFUL SERVER FUNCTIONS
-type Upgrader struct {
-	websocket.Upgrader
-}
-
-var upgrader websocket.Upgrader
-
-func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*WSConn, error) {
-	conn, err := u.Upgrader.Upgrade(w, r, responseHeader)
-	if err != nil {
-		return nil, err
-	}
-	return New(conn)
-}
-
 // THIS IS FOR THE CLIENT
 func Dial(urlStr string, requestHeader http.Header) (*WSConn, *http.Response, error) {
 	dialer := websocket.Dialer{}
@@ -247,5 +232,4 @@ func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) 
 	}
 	wsconn, err := New(conn)
 	return wsconn, resp, err // Not really sure about resp here- why does Dail* return it?
-
 }
