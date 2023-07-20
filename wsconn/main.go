@@ -91,7 +91,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 		}
 	}
 	if b != nil { // b won't be nil but doesn't mean n>0
-		defaultLogger.Info("wsconn.Read(): Packet Received: (amount=" + strconv.Itoa(n))+ ")")
+		defaultLogger.Info("wsconn.Read(): Packet Received: (amount=" + strconv.Itoa(n) + ")")
 		defaultLogger.Info("wsconn.Read(): " + strconv.Quote(string(bytes.Trim(b, "\x00"))))
 		if wst.mt == websocket.TextMessage {
 			// TODO: don't report this directly
