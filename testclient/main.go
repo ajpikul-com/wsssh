@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/ajpikul-com/ilog"
-	"github.com/ajpikul-com/wssh/wsconn"
+	"github.com/ajpikul-com/wsssh/wsconn"
 	"github.com/gorilla/websocket"
 )
 
@@ -49,8 +49,9 @@ func main() {
 		dumpResponse(resp)
 		return
 	}
-	wssshConnection := wsconn.WrapConn(conn)
-	defer wsssh.Close()
+	wssshConn := wsconn.WrapConn(conn)
+	defer wssshConn.Close()
+	_ = wssshConn
 
 	// Not we have a wrapped connection, we need to be able to call things on it.
 }
