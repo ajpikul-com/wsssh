@@ -1,13 +1,8 @@
 package main
 
 import (
-	"flag"
-	"net"
 	"net/http"
-	"os"
 	"time"
-
-	"golang.org/x/crypto/ssh"
 
 	"github.com/ajpikul-com/ilog"
 	"github.com/ajpikul-com/wsssh/wsconn"
@@ -28,7 +23,7 @@ func init() {
 
 func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 	defaultLogger.Info("Incoming: Req: " + r.Host + ", " + r.URL.Path)
-	conn, err := sshoverws.Upgrade(w, r)
+	conn, err := wsconn.Upgrade(w, r)
 	if err != nil {
 		defaultLogger.Error(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -44,7 +39,7 @@ func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	m := mux.NewRouter()
-	m.HandleFunc("/", handleProxy)
+	m.HandleFunc("/", ServeWSConn)
 	s := &http.Server{
 		Addr:           HostPort,
 		Handler:        m,
