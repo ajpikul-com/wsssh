@@ -7,7 +7,7 @@ init:
 local: *.go ../wsconn/*.go
 	cp go.mod.local go.mod
 	cp go.sum.local go.sum
-	-GOPROXY=direct go get -u && go mod tidy && go build
+	-go get -u && go mod tidy && go build
 	cp go.mod go.mod.local
 	cp go.sum go.sum.local
 	touch local
