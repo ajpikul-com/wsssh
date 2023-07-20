@@ -32,7 +32,7 @@ func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	readBuffer := make([]byte, 1024)
-	for n, err := conn.Read(readBuffer); err == nil; n, err = conn.Read(readBuffer) {
+	for n, err := conn.Read(readBuffer); n != 0; n, err = conn.Read(readBuffer) {
 		defaultLogger.Info("Server:")
 		defaultLogger.Info("Server: In read:")
 		defaultLogger.Info("Server: N is: " + strconv.Itoa(n))
