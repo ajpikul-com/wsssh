@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/ajpikul-com/ilog"
+	"github.com/ajpikul-com/wsssh"
 	"github.com/ajpikul-com/wsssh/wsconn"
 	"github.com/gorilla/mux"
 )

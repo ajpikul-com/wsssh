@@ -19,3 +19,7 @@ gerbers/
 *.lck
 server/server
 client/client
+go.mod.local
+go.sum.local
+go.mod.official
+go.sum.official
