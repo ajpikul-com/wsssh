@@ -7,7 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
+	"sync"
 	"time"
 
 	"github.com/ajpikul-com/ilog"
@@ -23,98 +23,134 @@ func init() {
 	}
 }
 
-// SetDefaultLogger attaches a logger to the lib. See github.com/ayajyt/ilog
+// SetDefaultLogger attaches a logger to the lib. See github.com/ajpikul-com/ilog
 func SetDefaultLogger(newLogger ilog.LoggerInterface) {
 	defaultLogger = newLogger
 	defaultLogger.Info("Default Logger Set")
 }
 
-// WSTransport satisfied the net.Conn interface by wrapping the websocket.Conn
-type WSTransport struct {
+// WSConn satisfies the net.Conn interface
+type WSConn struct {
+	// The underlying websocket connection.
 	Conn *websocket.Conn
-	r    io.Reader // it has to save the reader because websocket.Conn forces you to reuse readers
-	mt   int
+
+	// READING STUFF
+	// Effectively indicate if we're mid frame
+	r  io.Reader
+	mt int
+	// TextBuffer
+	TextBuffer *bytes.Buffer // We're going to have to initialize this TODO
+
+	// WRITING STUFF
+	writeMutex sync.Mutex
 }
 
-// Read wraps websockets read so that the whole connection is treated as a continue stream, throwing out any EOFs.  So if there is a legit EOF, it won't work- it should be a Close handshake anyway.
-func (wst *WSTransport) Read(b []byte) (n int, err error) {
-	defaultLogger.Info("wsconn.Read()")
-	if wst.r == nil {
-		defaultLogger.Info("wsconn.Read(): Need new reader, calling NextReader()")
-		var mt int
-		mt, r, err := wst.Conn.NextReader() // Errors from here are fatal, connection must be reset
-		defaultLogger.Info("wsconn.Read(): Got a reader! (Or error)")
-		if err != nil {
-			if websocket.IsCloseError(err,
-				websocket.CloseNormalClosure,
-				websocket.CloseAbnormalClosure,
-			) {
-				defaultLogger.Info("wsconn.Read().NextReader(): A Close Return: " + err.Error())
+// New returns an initialized *WSConn
+func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
+	wsconn = &WSConn{Conn: conn, r: nil, mt: 0, TextBuffer: new(bytes.Buffer)}
+	wsconn.Conn.SetPingHandler(func(message string) error {
+		err = wsconn.WritePong([]byte(message))
+		if err == websocket.ErrCloseSent {
+			return nil
+		} else if e, ok := err.(net.Error); ok && e.Temporary() {
+			// I don't know if we can do this, as we can't see Gorillaz net.Error struct
+			return nil
+		}
+		return err
+	})
+	return wsconn, nil
+}
+
+// The main Read() function
+// Only one thread can call read, it will be whatever is using WSConn like net.Conn
+// It will be populating TextBuffer
+// How do we read TextBuffer? I don't know. TODO
+func (conn *WSConn) Read(b []byte) (n int, err error) {
+	for { // We'll read until our first binary message
+		if conn.mt == 0 { // Need to read until EOF before calling NextReader() again
+			// Errors from here are fatal, connection must be reset
+			mt, r, err := conn.Conn.NextReader()
+			if err != nil {
+				if websocket.IsCloseError(err,
+					websocket.CloseNormalClosure,
+					websocket.CloseAbnormalClosure,
+				) {
+					defaultLogger.Info("wsconn.Read().NextReader(): A Close Return: " + err.Error())
+					return 0, err
+				}
+				defaultLogger.Error("wsconn.Read().NextReader(): " + err.Error())
 				return 0, err
 			}
-			defaultLogger.Error("wsconn.Read().NextReader(): " + err.Error())
-			return 0, err
-		}
 
-		wst.mt = mt
-		wst.r = r
+			conn.mt = mt
+			conn.r = r
 
-		var mtStr string
-		if mt == websocket.TextMessage {
-			mtStr = "TextMessage"
-		} else if mt == websocket.BinaryMessage {
-			mtStr = "BinaryMessage"
-		} else if mt == websocket.CloseMessage {
-			mtStr = "CloseMessage"
-		} else if mt == websocket.PingMessage {
-			mtStr = "PingMessage"
-		} else if mt == websocket.PongMessage {
-			mtStr = "PongMessage"
+			if conn.mt > websocket.BinaryMessage {
+				defaultLogger.Error("wsconn.Read(): unexpected message type")
+				// Controls shouldn't get here
+				return 0, errors.New("wsconn.Read(): Wrong error type received")
+			}
 		}
-		defaultLogger.Info("wsconn.Read(): MessageType: " + mtStr)
-		if wst.mt > websocket.BinaryMessage {
-			defaultLogger.Error("wsconn.Read(): unexpected message type")
-			// is it true we never receive control from NextReader
-			return 0, errors.New("wsconn.Read(): Wrong error type received")
-		}
-	}
-	defaultLogger.Info("wsconn.Read(): calling internal read()")
-	n, err = wst.r.Read(b) // Obnoxiously, b may be filled w/ previous read if error exists
-	defaultLogger.Info("wsconn.Read(): interal read returned()")
-	if err != nil {
-		wst.r = nil // set wst.mt to 0 later after processing
-		if err == io.EOF {
-			defaultLogger.Info("wsconn.Read(): reached EOF")
-			err = nil
-			// This is not a real error tha twe want to report from read, it's normal.
-			// We give what we can give, you call again
-		} else {
-			defaultLogger.Error("wsconn.Read(): NextReader's io.Reader.Read() " + err.Error())
-			return n, err
+		for { // keep on reading until we return or break out
+			n, err = conn.r.Read(b)
+			if err != nil || b == nil {
+				conn.r = nil
+				conn.mt = 0
+				if err == io.EOF {
+					defaultLogger.Info("wsconn.Read(): reached EOF")
+					err = nil
+					break // break out of this forloop and go get a new reader
+				} else {
+					defaultLogger.Error("wsconn.Read(): NextReader's io.Reader.Read() " + err.Error())
+					return n, err
+				}
+			}
+			if conn.mt == websocket.TextMessage {
+				conn.TextBuffer.Write(b) // will this really work? Do we need to indicare length?
+			} else {
+				return n, err
+			}
 		}
 	}
-	if b != nil { // b won't be nil but doesn't mean n>0
-		defaultLogger.Info("wsconn.Read(): Packet Received: (amount=" + strconv.Itoa(n) + ")")
-		defaultLogger.Info("wsconn.Read(): " + strconv.Quote(string(bytes.Trim(b, "\x00"))))
-		if wst.mt == websocket.TextMessage {
-			// TODO: don't report this directly
-			// Maybe we need seperate ReadText()
-			// Or just dump this all into hooks?
-			return 0, nil
-		}
-	}
-	if wst.r == nil {
-		wst.mt = 0
-	}
-	// Caller must n bytes from buffer since buffer may be filled with old data
-	// Error not reliable since we don't know if EOF error + partial data is possible
-	return n, err
 }
 
-// Are there race conditions here
-func (wst *WSTransport) Write(b []byte) (n int, err error) {
-	defaultLogger.Info("wsconn.Write(): WSTransport.Write() called")
-	wc, err := wst.Conn.NextWriter(websocket.BinaryMessage)
+// Write is the Write that net.Conn expects
+func (conn *WSConn) Write(b []byte) (n int, err error) {
+	return conn.write(b, websocket.BinaryMessage)
+}
+
+// WriteText sends text down side channel
+func (conn *WSConn) WriteText(b []byte) (n int, err error) {
+	return conn.write(b, websocket.TextMessage)
+}
+
+func (conn *WSConn) WritePing(b []byte) (err error) {
+	_, err = conn.write(b, websocket.PingMessage)
+	return
+}
+
+func (conn *WSConn) WritePong(b []byte) (err error) {
+	_, err = conn.write(b, websocket.PongMessage)
+	return
+}
+
+func (conn *WSConn) WriteClose(b []byte) (err error) {
+	_, err = conn.write(b, websocket.CloseMessage)
+	return
+}
+
+// Central write function to handle mutexes and stuff
+// We have ot have mutex in package because some package that grabs
+// our wsconn like a net.conn definitely won't respect our side channels (text, ping, etc)
+func (conn *WSConn) write(b []byte, mt int) (n int, err error) {
+	conn.writeMutex.Lock()
+	defer conn.writeMutex.Unlock()
+
+	if mt == websocket.PingMessage || mt == websocket.PongMessage || mt == websocket.CloseMessage {
+		err = conn.Conn.WriteMessage(mt, b)
+		return 0, err
+	}
+	wc, err := conn.Conn.NextWriter(mt)
 	if err != nil {
 		return 0, err
 	}
@@ -122,47 +158,34 @@ func (wst *WSTransport) Write(b []byte) (n int, err error) {
 	if err != nil {
 		return n, err
 	}
-	err = wc.Close()
+	err = wc.Close() // close the writer, open a new one the next write.
+	// this seems inefficient, but we don't know what kind of message we're going to send next
 	return n, err
 }
 
-func (wst *WSTransport) WriteText(s string) error {
-	defaultLogger.Info("wsconn.WriteText(): Sending text message via websocket: " + s)
-	var err error = nil
-	if err = wst.Conn.WriteMessage(websocket.TextMessage, []byte(s)); err != nil {
-		defaultLogger.Error("wsconn.WriteText(): WSTransport.WriteText(): " + err.Error())
-	}
-	return err
-}
-
 // Close is a simple wrap for the underlying websocket.Conn
-func (wst *WSTransport) Close() error {
-	defaultLogger.Info("Calling sshoverws.WSTransport.Close()")
-	return wst.Conn.Close()
+func (conn *WSConn) Close() error {
+	conn.TextBuffer = nil // probalby not necessary
+	return conn.Conn.Close()
 }
 
 // LocalAddr is a simple wrap for the underlying websocket.Conn
-func (wst *WSTransport) LocalAddr() net.Addr {
-	addr := wst.Conn.LocalAddr()
-	defaultLogger.Info("Calling sshoverws.WSTransport.LocalAddr()-> " + addr.Network() + ": " + addr.String())
-	return addr
+func (conn *WSConn) LocalAddr() net.Addr {
+	return conn.Conn.LocalAddr()
 }
 
 // RemoteAddr is a simple wrap for the underlying websocket.Conn
-func (wst *WSTransport) RemoteAddr() net.Addr {
-	addr := wst.Conn.RemoteAddr()
-	defaultLogger.Info("Calling sshoverws.WSTransport.RemoteAddr()-> " + addr.Network() + ": " + addr.String())
-	return addr
+func (conn *WSConn) RemoteAddr() net.Addr {
+	return conn.Conn.RemoteAddr()
 }
 
 // SetDeadline is a simple wrap for the underlying websocket.Conn
-func (wst *WSTransport) SetDeadline(t time.Time) error {
-	defaultLogger.Info("Calling WSTransport.SetDeadline()")
-	if err := wst.SetReadDeadline(t); err != nil {
+func (conn *WSConn) SetDeadline(t time.Time) error {
+	if err := conn.SetReadDeadline(t); err != nil {
 		defaultLogger.Error("SetReadDeadline(): " + err.Error())
 		return err
 	}
-	if err := wst.SetWriteDeadline(t); err != nil {
+	if err := conn.SetWriteDeadline(t); err != nil {
 		defaultLogger.Error("SetWriteDeadline(): " + err.Error())
 		return err
 	}
@@ -170,9 +193,8 @@ func (wst *WSTransport) SetDeadline(t time.Time) error {
 }
 
 // SetReadDeadline is a simple wrap for the underlying websocket.Conn
-func (wst *WSTransport) SetReadDeadline(t time.Time) error {
-	defaultLogger.Info("Calling WSTransport.SetReadDeadline()")
-	if err := wst.SetReadDeadline(t); err != nil {
+func (conn *WSConn) SetReadDeadline(t time.Time) error {
+	if err := conn.SetReadDeadline(t); err != nil {
 		defaultLogger.Error("SetReadDeadline(): " + err.Error())
 		return err
 	}
@@ -180,66 +202,50 @@ func (wst *WSTransport) SetReadDeadline(t time.Time) error {
 }
 
 // SetWriteDeadline is a simple wrap for the underlying websocket.Conn
-func (wst *WSTransport) SetWriteDeadline(t time.Time) error {
-	defaultLogger.Info("Calling WSTransport.SetWriteDeadline()")
-	if err := wst.SetWriteDeadline(t); err != nil {
+func (conn *WSConn) SetWriteDeadline(t time.Time) error {
+	if err := conn.SetWriteDeadline(t); err != nil {
 		defaultLogger.Error("SetWriteDeadline():" + err.Error())
 		return err
 	}
 	return nil
 }
 
-// Probably not the best way to provide this, but I can't figure out why exactly besides aesthetic. It does make the API easier.
-// Question is: will client need access to upgrader? Don't want to try and replace
+// USEFUL SERVER FUNCTIONS
+type Upgrader struct {
+	websocket.Upgrader
+}
+
 var upgrader websocket.Upgrader
 
-func init() {
-	upgrader = websocket.Upgrader{
-		ReadBufferSize:   1024, // is it reasonable size? how do we tune
-		WriteBufferSize:  1024,
-		HandshakeTimeout: 10 * time.Second,
-		CheckOrigin: func(r *http.Request) bool {
-			return true // so this basically allows requests from any origin? okay...
-		},
-	}
-}
-
-func Upgrade(w http.ResponseWriter, r *http.Request) (*WSTransport, error) {
-	defaultLogger.Info("Calling WSTransport.Upgrade(w,r)")
-	conn, err := upgrader.Upgrade(w, r, nil)
+func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*WSConn, error) {
+	conn, err := u.Upgrader.Upgrade(w, r, responseHeader)
 	if err != nil {
-		defaultLogger.Error("Upgrade: " + err.Error())
+		return nil, err
 	}
-	return WrapConn(conn), err
+	return New(conn)
 }
 
-// Dial wraps websockets.dial
-func Dial(urlStr string, requestHeader http.Header) (*WSTransport, *http.Response, error) {
-	defaultLogger.Info("Calling WSTransport.Dial")
+// THIS IS FOR THE CLIENT
+func Dial(urlStr string, requestHeader http.Header) (*WSConn, *http.Response, error) {
 	dialer := websocket.Dialer{}
 	conn, resp, err := dialer.Dial(urlStr, requestHeader)
 	if err != nil {
 		defaultLogger.Error("dialer.Dial: " + err.Error())
 		return nil, nil, err
 	}
-	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
+	wsconn, err := New(conn)
+	return wsconn, resp, err // Not really sure about resp here- why does Dail* return it?
 }
 
 // DialContext wraps websockets.DialContext
-func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) (*WSTransport, *http.Response, error) {
-	defaultLogger.Info("Calling WSTransport.DialContext")
+func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) (*WSConn, *http.Response, error) {
 	dialer := websocket.Dialer{}
 	conn, resp, err := dialer.DialContext(ctx, urlStr, requestHeader)
 	if err != nil {
 		defaultLogger.Error("dialer.DialContext: " + err.Error())
 		return nil, nil, err
 	}
-	return WrapConn(conn), resp, err // Not really sure about resp here- why does Dail* return it?
-}
+	wsconn, err := New(conn)
+	return wsconn, resp, err // Not really sure about resp here- why does Dail* return it?
 
-// WrapConn takes a websockets connection and makes it a proper stream. Helper functions are provided (dial, upgrade)
-func WrapConn(conn *websocket.Conn) *WSTransport {
-	// I guess we get net.Addr from here
-	defaultLogger.Info("wsconn.WrapConn(): In WSTransport.WrapConn")
-	return &WSTransport{Conn: conn, r: nil}
 }
