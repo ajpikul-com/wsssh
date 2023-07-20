@@ -1,16 +1,16 @@
 package main
 
 import (
-	"time"
+	"flag"
 	"net"
 	"net/http"
-	"flag"
 	"os"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/ayjayt/ilog"
-	"github.com/ayjayt/AccessTunnel/sshoverws"
+	"github.com/ajpikul-com/ilog"
+	"github.com/ajpikul-com/wsssh/wsconn"
 	"github.com/gorilla/mux"
 )
 
@@ -18,8 +18,7 @@ var hostPrivateKey = flag.String("hostkey", "", "Path to the your private key")
 
 var defaultLogger ilog.LoggerInterface
 
-
-func init(){
+func init() {
 	defaultLogger = new(ilog.ZapWrap)
 	defaultLogger.(*ilog.ZapWrap).Paths = []string{"./server.log"}
 	err := defaultLogger.Init()
@@ -28,15 +27,14 @@ func init(){
 	}
 	sshoverws.SetDefaultLogger(defaultLogger)
 	flag.Parse()
-	if (len(*hostPrivateKey) == 0) {
+	if len(*hostPrivateKey) == 0 {
 		defaultLogger.Error("Server main.go flags: No ssh-local private key set")
 		defaultLogger.Info("Skipping private key error since no auth is implemented yet")
 	}
 }
 
-
 func handleProxy(w http.ResponseWriter, r *http.Request) {
-	defaultLogger.Info("Connection made to handleProxy: Req: " + r.Host +", " + r.URL.Path)
+	defaultLogger.Info("Connection made to handleProxy: Req: " + r.Host + ", " + r.URL.Path)
 	conn, err := sshoverws.Upgrade(w, r)
 	if err != nil {
 		defaultLogger.Error("handleProxy sshoverws.Upgrade: " + err.Error())
@@ -59,7 +57,7 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	// This is where the globals have been set up.
 	defaultLogger.Info("Creating an ssh.NewClientConn to the edge device")
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
-	//sshClientConn, _, _, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
+		//sshClientConn, _, _, err := ssh.NewClientConn(conn, r.RemoteAddr, &ssh.ClientConfig{
 		User: "ajp",
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			// the hosts public key was traded by diffee hellman, we've verified that it has the private key
@@ -111,14 +109,14 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func main(){
+func main() {
 	m := mux.NewRouter()
 	m.HandleFunc("/", handleProxy)
-	s := &http.Server {
-		Addr: "127.0.0.1:2223",
-		Handler:	m,
-		ReadTimeout:	10 * time.Second,
-		WriteTimeout:	10 * time.Second,
+	s := &http.Server{
+		Addr:           "127.0.0.1:2223",
+		Handler:        m,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 	defaultLogger.Info("Serving an http(s) server!")
@@ -128,4 +126,3 @@ func main(){
 	}
 	defaultLogger.Info("Done with all on server")
 }
-
