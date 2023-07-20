@@ -6,7 +6,7 @@ replace github.com/ajpikul-com/wsssh/wsconn => ../wsconn
 
 require (
 	github.com/ajpikul-com/ilog v0.0.0-20230714204235-1f6eb0175462
-	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230720200805-df380a30d16e
+	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230720201350-4935540d89b8
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 )
