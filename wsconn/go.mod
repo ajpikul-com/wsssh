@@ -1,4 +1,4 @@
-module github.com/ayjayt/wsssh/wsconn
+module github.com/ajpikul-com/wsssh/wsconn
 
 go 1.14
 
