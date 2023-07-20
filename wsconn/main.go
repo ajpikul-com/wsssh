@@ -77,10 +77,7 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			return 0, errors.New("wsconn.Read(): Wrong error type received")
 		}
 	}
-	n, err = wst.r.Read(b)
-	if b != nil {
-		defaultLogger.Info("wsconn.Read(): Packet Received: (amount=" + strconv.Itoa(n) + ")\n" + strconv.Quote(string(bytes.Trim(b, "\x00"))))
-	}
+	n, err = wst.r.Read(b) // Obnoxiously, b may be filled w/ previous read if error exists
 	if err != nil {
 		wst.r = nil // set wst.mt to 0 later after processing
 		if err == io.EOF {
@@ -90,20 +87,24 @@ func (wst *WSTransport) Read(b []byte) (n int, err error) {
 			// We give what we can give, you call again
 		} else {
 			defaultLogger.Error("wsconn.Read(): NextReader's io.Reader.Read() " + err.Error())
+			return n, err
 		}
 	}
-	if wst.mt == websocket.TextMessage {
-		// TODO: don't report this directly
-		// Maybe we need seperate ReadText()
-		// Or just dump this all into hooks?
-		return 0, nil
+	if b != nil { // I don't know if it's possible to have EOF and final data in b
+		defaultLogger.Info("wsconn.Read(): Packet Received: (amount=" + strconv.Itoa(n))
+		defaultLogger.Info("wsconn.Read(): " + strconv.Quote(string(bytes.Trim(b, "\x00"))))
+		if wst.mt == websocket.TextMessage {
+			// TODO: don't report this directly
+			// Maybe we need seperate ReadText()
+			// Or just dump this all into hooks?
+			return 0, nil
+		}
 	}
-
 	if wst.r == nil {
 		wst.mt = 0
 	}
-	// n is better than err for detecting if read is done
-	// but how should the caller loop on this, not sure yet
+	// Caller must n bytes from buffer since buffer may be filled with old data
+	// Error not reliable since we don't know if EOF error + partial data is possible
 	return n, err
 }
 
@@ -236,6 +237,6 @@ func DialContext(ctx context.Context, urlStr string, requestHeader http.Header) 
 // WrapConn takes a websockets connection and makes it a proper stream. Helper functions are provided (dial, upgrade)
 func WrapConn(conn *websocket.Conn) *WSTransport {
 	// I guess we get net.Addr from here
-	defaultLogger.Info("In WSTransport.WrapConn")
+	defaultLogger.Info("wsconn.WrapConn(): In WSTransport.WrapConn")
 	return &WSTransport{Conn: conn, r: nil}
 }
