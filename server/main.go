@@ -37,6 +37,11 @@ func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 		defaultLogger.Info("Server: In read:")
 		defaultLogger.Info("Server: N is: " + strconv.Itoa(n))
 		defaultLogger.Info("Server: " + string(readBuffer[:]))
+		if err != nil {
+			defaultLogger.Error("Server: Err:" + err.Error())
+			defaultLogger.Info("Server:")
+			break
+		}
 		defaultLogger.Info("Server:")
 	}
 
