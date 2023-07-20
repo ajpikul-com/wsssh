@@ -37,7 +37,8 @@ func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 		defaultLogger.Info("Server: In read:")
 		defaultLogger.Info("Server: N is: " + strconv.Itoa(n))
 		defaultLogger.Info("Server: " + string(readBuffer[:]))
-		if err != nil {
+		if err != nil { // here we also break on error, couldn't put it in 4 because
+			// I wanted to see the buffer first
 			defaultLogger.Error("Server: Err:" + err.Error())
 			defaultLogger.Info("Server:")
 			break
