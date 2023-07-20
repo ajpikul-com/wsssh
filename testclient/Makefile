@@ -1,3 +1,7 @@
+run:
+	go build
+	./testclient
+
 init:
 	cp go.mod go.mod.local
 	cp go.mod go.mod.official

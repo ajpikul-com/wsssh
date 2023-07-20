@@ -12,7 +12,7 @@ import (
 var defaultLogger ilog.LoggerInterface
 
 func init() {
-	defaultLogger = &ilog.ZapWrap{Sugar: true}
+	defaultLogger = &ilog.SimpleLogger{}
 	err := defaultLogger.Init()
 	if err != nil {
 		panic(err)
