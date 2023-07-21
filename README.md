@@ -1,5 +1,6 @@
 ## Developer Tip
 
+some updates to Close - need to think about mutex now
 use `make local` to point everything to local versions
 use `make official` before push
 
