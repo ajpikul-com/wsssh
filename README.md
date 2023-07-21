@@ -1,4 +1,6 @@
 
+use `make local` to point everything to local versions
+use `make official` before push
 
 Undocumented, this is a set of tools to work with ssh + websockets + more
 
