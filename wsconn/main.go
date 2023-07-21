@@ -7,7 +7,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ajpikul-com/ilog"
@@ -44,6 +46,10 @@ type WSConn struct {
 
 	// WRITING STUFF
 	writeMutex sync.Mutex
+
+	//
+	allowClose atomic.Bool
+	closeMutex sync.Mutex
 }
 
 // New returns an initialized *WSConn
@@ -89,6 +95,7 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 		}
 		for {
 			n, err = conn.r.Read(b)
+			defaultLogger.Info("Read: " + strconv.Itoa(n))
 			if err != nil || b == nil {
 				conn.r = nil
 				conn.mt = 0
@@ -171,12 +178,25 @@ func (conn *WSConn) write(b []byte, mt int) (n int, err error) {
 	return n, err
 }
 
+func (conn *WSConn) AllowClose() {
+	conn.allowClose.Store(true)
+}
+
 // Close is a simple wrap for the underlying websocket.Conn
 func (conn *WSConn) Close() error {
+	if !conn.allowClose.Load() {
+		return nil
+	}
+	conn.closeMutex.Lock()
+	defer conn.closeMutex.Unlock()
+	defaultLogger.Info("Closing underlying connection")
 	err := conn.Conn.Close()
 	if conn.TextChan != nil {
+		defaultLogger.Info("Closing channel")
 		close(conn.TextChan)
+		conn.TextChan = nil
 	}
+	defaultLogger.Info("Freeing TextBuffer Pointer")
 	conn.TextBuffer = nil // probalby not necessary
 	return err
 }
