@@ -1,7 +1,7 @@
 github.com/ajpikul-com/ilog v0.0.0-20230714204235-1f6eb0175462 h1:0Jg2vlHaD0QvLCyKfza4nbHV8t3ywg6IxwZ4Pc18yic=
 github.com/ajpikul-com/ilog v0.0.0-20230714204235-1f6eb0175462/go.mod h1:xSmkTWT+APtO6ZsnlK54Z12Gxa6AFnwtUOx1r7g0njw=
-github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721014555-fe4d3b992bd5 h1:B6tnMkrTZbKThiK3Ob2ZfNi2Xsx9/IK7Q7ZqmEG7hs0=
-github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721014555-fe4d3b992bd5/go.mod h1:II9uC9rBJV7+pvScGQsAqC5FESd+Oj7ZtJr97MzDzAE=
+github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721051538-aa49791a27d4 h1:7MRxJI4ntWoft62XkxgjBWRlxbCLNpvRZowQt11e4fo=
+github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721051538-aa49791a27d4/go.mod h1:II9uC9rBJV7+pvScGQsAqC5FESd+Oj7ZtJr97MzDzAE=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
