@@ -40,6 +40,7 @@ type WSConn struct {
 	mt int
 	// TextBuffer
 	TextBuffer *bytes.Buffer // We're going to have to initialize this TODO
+	TextChan   chan int
 
 	// WRITING STUFF
 	writeMutex sync.Mutex
@@ -106,7 +107,10 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 				}
 			}
 			if conn.mt == websocket.TextMessage {
-				conn.TextBuffer.Write(b) // will this really work? Do we need to indicare length?
+				if conn.TextChan != nil {
+					conn.TextBuffer.Write(b[0:n]) // will this really work? Do we need to indicare length?
+					conn.TextChan <- n
+				}
 			} else {
 				return n, err
 			}
@@ -165,6 +169,7 @@ func (conn *WSConn) write(b []byte, mt int) (n int, err error) {
 
 // Close is a simple wrap for the underlying websocket.Conn
 func (conn *WSConn) Close() error {
+	close(conn.TextChan)
 	conn.TextBuffer = nil // probalby not necessary
 	return conn.Conn.Close()
 }
