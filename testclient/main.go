@@ -28,11 +28,12 @@ func main() {
 		panic(err.Error())
 	}
 
-	// This is a write test combing multiple apis for writing websockets
-	wssshConn.Conn.WriteMessage(gws.TextMessage, []byte("Test Message"))
-	wssshConn.Conn.WriteControl(gws.PingMessage, []byte("PING"), time.Time{})
-	time.Sleep(2000 * time.Millisecond)
-	_, err = wssshConn.Write([]byte("12345678"))
+	for i := 0; i < 2; i++ {
+		wssshConn.WriteText([]byte("Test Message"))
+		time.Sleep(2000 * time.Millisecond)
+		_, err = wssshConn.Write([]byte("12345678"))
+		time.Sleep(2000 * time.Millisecond)
+	}
 	wssshConn.Conn.WriteControl(gws.CloseMessage, []byte(""), time.Time{})
 	err = wssshConn.Close()
 	if err != nil {
