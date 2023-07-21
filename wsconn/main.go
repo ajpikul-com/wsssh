@@ -50,6 +50,7 @@ type WSConn struct {
 func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
 	wsconn = &WSConn{Conn: conn, r: nil, mt: 0, TextBuffer: new(bytes.Buffer)}
 	wsconn.Conn.SetPingHandler(func(message string) error {
+		defaultLogger.Info("Ping In: " + message)
 		err = wsconn.WritePong([]byte(message))
 		if err == websocket.ErrCloseSent {
 			return nil
@@ -130,11 +131,13 @@ func (conn *WSConn) WriteText(b []byte) (n int, err error) {
 }
 
 func (conn *WSConn) WritePing(b []byte) (err error) {
+	defaultLogger.Info("Ping Out: " + string(b[:]))
 	_, err = conn.write(b, websocket.PingMessage)
 	return
 }
 
 func (conn *WSConn) WritePong(b []byte) (err error) {
+	defaultLogger.Info("Pong Out: " + string(b[:]))
 	_, err = conn.write(b, websocket.PongMessage)
 	return
 }
