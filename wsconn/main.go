@@ -62,54 +62,55 @@ func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
 	return wsconn, nil
 }
 
-// The main Read() function
-// Only one thread can call read, it will be whatever is using WSConn like net.Conn
-// It will be populating TextBuffer
-// How do we read TextBuffer? I don't know. TODO
+// Read()
 func (conn *WSConn) Read(b []byte) (n int, err error) {
-	for { // We'll read until our first binary message
-		if conn.mt == 0 { // Need to read until EOF before calling NextReader() again
-			// Errors from here are fatal, connection must be reset
+	for {
+		if conn.mt == 0 {
 			mt, r, err := conn.Conn.NextReader()
 			if err != nil {
 				if websocket.IsCloseError(err,
 					websocket.CloseNormalClosure,
 					websocket.CloseAbnormalClosure,
 				) {
-					defaultLogger.Info("wsconn.Read().NextReader(): A Close Return: " + err.Error())
+					defaultLogger.Error("WSConn.Read() Received A NextReader Close Error: " + err.Error())
 					return 0, err
 				}
-				defaultLogger.Error("wsconn.Read().NextReader(): " + err.Error())
 				return 0, err
+				defaultLogger.Error("WSConn.Read() Received A NextReader Non-Close Error: " + err.Error())
 			}
 
 			conn.mt = mt
 			conn.r = r
 
 			if conn.mt > websocket.BinaryMessage {
-				defaultLogger.Error("wsconn.Read(): unexpected message type")
-				// Controls shouldn't get here
 				return 0, errors.New("wsconn.Read(): Wrong error type received")
 			}
 		}
-		for { // keep on reading until we return or break out
+		for {
 			n, err = conn.r.Read(b)
 			if err != nil || b == nil {
 				conn.r = nil
 				conn.mt = 0
 				if err == io.EOF {
-					defaultLogger.Info("wsconn.Read(): reached EOF")
+					defaultLogger.Error("WSConn.Read() EOF End Of Frame")
 					err = nil
-					break // break out of this forloop and go get a new reader
+					break //  What if we have partial buffer? We need to check if it's text buffer or not TODO
 				} else {
-					defaultLogger.Error("wsconn.Read(): NextReader's io.Reader.Read() " + err.Error())
+					defaultLogger.Error("WSConn.Read() error: " + err.Error())
 					return n, err
 				}
 			}
 			if conn.mt == websocket.TextMessage {
 				if conn.TextChan != nil {
-					conn.TextBuffer.Write(b[0:n]) // will this really work? Do we need to indicare length?
+					_, err := conn.TextBuffer.Write(b[0:n]) // Length TODO
+					if err != nil {
+						return n, err
+					}
 					conn.TextChan <- n
+				} else {
+					// return 0, errors.New("wsconn.TextChan: Doesn't exist")
+					// Just keep looking for binary messages
+					conn.TextBuffer.Reset()
 				}
 			} else {
 				return n, err
@@ -169,9 +170,12 @@ func (conn *WSConn) write(b []byte, mt int) (n int, err error) {
 
 // Close is a simple wrap for the underlying websocket.Conn
 func (conn *WSConn) Close() error {
-	close(conn.TextChan)
+	err := conn.Conn.Close()
+	if conn.TextChan != nil {
+		close(conn.TextChan)
+	}
 	conn.TextBuffer = nil // probalby not necessary
-	return conn.Conn.Close()
+	return err
 }
 
 // LocalAddr is a simple wrap for the underlying websocket.Conn
