@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/ajpikul-com/ilog v0.0.0-20230714204235-1f6eb0175462
-	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721053849-652868e6d262
+	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721180908-729c538ec3ff
 	github.com/gorilla/websocket v1.5.0
 )
 
