@@ -44,13 +44,23 @@ func ReadBinary(conn *wsconn.WSConn) {
 }
 
 func WriteBinary(conn *wsconn.WSConn) {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 6; i++ {
 		_, err := conn.Write([]byte("12345678")) // TODO sure it wil write everyting?
 		if err != nil {
 			defaultLogger.Error("WriteBinary: wsconn.Write(): " + err.Error())
 			break
 		}
 		time.Sleep(2000 * time.Millisecond)
+	}
+}
+
+func Pinger(conn *wsconn.WSConn) {
+	for {
+		err := conn.WritePing([]byte("Perring"))
+		if err != nil {
+			defaultLogger.Error("Pinger: " + err.Error())
+		}
+		time.Sleep(1000 * time.Millisecond)
 	}
 }
 
@@ -73,6 +83,7 @@ func main() {
 	}
 
 	go WriteText(wssshConn)
+	go Pinger(wssshConn)
 	go ReadBinary(wssshConn)
 	WriteBinary(wssshConn)
 

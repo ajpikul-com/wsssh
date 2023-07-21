@@ -67,7 +67,7 @@ func ReadTexts(conn *wsconn.WSConn) {
 
 func ReadBinary(conn *wsconn.WSConn) {
 	var n int = 0
-	readBuffer := make([]byte, 12)
+	readBuffer := make([]byte, 256)
 	var err error = nil
 	for err == nil {
 		for n, err = conn.Read(readBuffer); n != 0; n, err = conn.Read(readBuffer) {
