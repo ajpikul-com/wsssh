@@ -192,6 +192,11 @@ func (conn *WSConn) AllowClose() {
 	conn.allowClose.Store(true)
 }
 
+func (conn *WSConn) CloseAll() error {
+	conn.allowClose.Store(true)
+	conn.Close()
+}
+
 // Close is a simple wrap for the underlying websocket.Conn
 func (conn *WSConn) Close() error {
 	if !conn.allowClose.Load() {
