@@ -73,6 +73,7 @@ func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
 func (conn *WSConn) Read(b []byte) (n int, err error) {
 	for {
 		if conn.mt == 0 { // Need NextReader()
+			defaultLogger.Info("WSConn.Read(): getting new frame")
 			mt, r, err := conn.Conn.NextReader() // Any error NextReader receives is fatal
 			if err != nil {
 				if websocket.IsCloseError(err,
@@ -90,12 +91,12 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 			conn.r = r
 
 			if conn.mt > websocket.BinaryMessage {
-				return 0, errors.New("wsconn.Read(): Wrong error type received")
+				return 0, errors.New("WSConn.Read(): Wrong error type received")
 			}
 		}
 		for {
 			n, err = conn.r.Read(b)
-			defaultLogger.Info("Read: " + strconv.Itoa(n))
+			defaultLogger.Info("WSConn.Read() n: " + strconv.Itoa(n))
 			if err != nil || b == nil {
 				conn.r = nil
 				mt = conn.mt
