@@ -28,7 +28,7 @@ func init() {
 // SetDefaultLogger attaches a logger to the lib. See github.com/ajpikul-com/ilog
 func SetDefaultLogger(newLogger ilog.LoggerInterface) {
 	defaultLogger = newLogger
-	defaultLogger.Info("Default Logger Set")
+	defaultLogger.Info("SetDefaultLogger: Default Logger Set")
 }
 
 // WSConn satisfies the net.Conn interface
@@ -69,11 +69,11 @@ func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
 	return wsconn, nil
 }
 
-// Read()
+// Read() satisfying net.Conn
 func (conn *WSConn) Read(b []byte) (n int, err error) {
 	for {
-		if conn.mt == 0 {
-			mt, r, err := conn.Conn.NextReader()
+		if conn.mt == 0 { // Need NextReader()
+			mt, r, err := conn.Conn.NextReader() // Any error NextReader receives is fatal
 			if err != nil {
 				if websocket.IsCloseError(err,
 					websocket.CloseNormalClosure,
@@ -98,11 +98,21 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 			defaultLogger.Info("Read: " + strconv.Itoa(n))
 			if err != nil || b == nil {
 				conn.r = nil
+				mt = conn.mt
 				conn.mt = 0
 				if err == io.EOF {
 					defaultLogger.Error("WSConn.Read() EOF End Of Frame")
-					err = nil
-					break //  What if we have partial buffer? We need to check if it's text buffer or not TODO
+					if n != 0 {
+						if mt == websocket.BinaryMessage {
+							return n, nil
+						} // else text message
+						_, err := conn.TextBuffer.Write(b[0:n]) // Length TODO
+						if err != nil {
+							return n, err // TODO not technically correct
+						}
+						conn.TextChan <- n
+					}
+					break
 				} else {
 					defaultLogger.Error("WSConn.Read() error: " + err.Error())
 					return n, err
@@ -112,7 +122,7 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 				if conn.TextChan != nil {
 					_, err := conn.TextBuffer.Write(b[0:n]) // Length TODO
 					if err != nil {
-						return n, err
+						return n, err // TODO not technically correct
 					}
 					conn.TextChan <- n
 				} else {
