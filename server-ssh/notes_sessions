@@ -1,0 +1,39 @@
+	go ssh.DiscardRequests(reqs)
+	for newChannel := range chans {
+		defaultLogger.Info("Found a chan")
+		if newChannel.ChannelType() != "session" {
+			defaultLogger.Info("Not a session")
+			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
+			continue
+		}
+		channel, requests, err := newChannel.Accept()
+		defaultLogger.Info("Accepted the session in the channel")
+		if err != nil {
+			panic("Channel accept failed " + err.Error())
+		}
+		go func(in <-chan *ssh.Request) {
+			for req := range in {
+				defaultLogger.Info("Processing a request " + req.Type)
+				if req.WantReply {
+					defaultLogger.Info("Wants a reply")
+					req.Reply(true, nil)
+				}
+				defaultLogger.Info("Req: " + string(req.Payload[:]))
+				defaultLogger.Info("Now reading input to channel")
+				defaultLogger.Info("trying to write channel")
+				//p := make([]byte, 1024)
+				//_, err := channel.Read(p)
+				_, err := channel.Write([]byte("He who eats kitties"))
+				defaultLogger.Info("wrote channel")
+				if err != nil {
+					defaultLogger.Info("Channel Read: " + err.Error())
+					break
+				}
+				channel.SendRequest("exit-status", false, []byte{0b00, 0b00, 0b00, 0b00})
+				time.Sleep(5 * time.Second)
+				defaultLogger.Info("Req reply and channel close")
+				time.Sleep(5 * time.Second)
+				channel.Close()
+			}
+		}(requests)
+	}

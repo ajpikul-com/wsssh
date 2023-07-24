@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"sync"
@@ -14,21 +13,13 @@ import (
 var url string = "ws://127.0.0.1:4648"
 
 func ReadTexts(conn *wsconn.WSConn) {
-	textChan := make(chan int)
-	conn.TextChan = textChan
-	p := make([]byte, 1024)
-	for _ = range textChan {
-		for conn.TextBuffer.Len() > 0 { // Length left to read
-			n, err := conn.TextBuffer.Read(p)
-			defaultLogger.Info("ReadTexts: " + string(p[0:n]))
-			if err != nil {
-				defaultLogger.Error("ReadTexts: TextBuffer.Read():" + err.Error())
-				break
-			}
-		}
+	channel, _ := conn.SubscribeToTexts()
+	defaultLogger.Info("Beginning to read texts")
+	for s := range channel {
+		defaultLogger.Info("ReadTexts: " + s)
 	}
 	defaultLogger.Info("ReadTexts Channel Closed")
-	// The channel has been closed by someone else
+
 }
 
 func WriteText(conn *wsconn.WSConn) {
@@ -42,55 +33,76 @@ func WriteText(conn *wsconn.WSConn) {
 	}
 }
 
-func Pinger(conn *wsconn.WSConn) {
+func Pinger(conn *wsconn.WSConn) error {
+	defaultLogger.Info("Beggining Ping Loop")
 	for {
-		err := conn.WritePing([]byte("Perring"))
+		err := conn.WritePing([]byte("Pingaring'll Payload"))
 		if err != nil {
-			defaultLogger.Error("Pinger: " + err.Error())
+			defaultLogger.Error("Pinger dead: " + err.Error())
+			return err
 		}
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(10000 * time.Millisecond)
 	}
+	defaultLogger.Info("Ending Ping Loop, will never get here")
+	return nil
 }
 
 func main() {
 	// Doing a lot of stuff manually w/ websockets - still not sure why I'm doing it this way
 	defaultLogger.Info("Initializing websockets dialer from client")
 
-	_, cancel := context.WithCancel(context.Background())
-	defer cancel() // Is this really necessary?
-	dialer := gws.Dialer{}
-	conn1, resp, err := dialer.Dial(url, nil)
-	if err != nil {
-		defaultLogger.Error("websocket.Dialier.Dial: Dial fail: " + err.Error())
-		dumpResponse(resp)
-		return
-	}
-	wssshConn, err := wsconn.New(conn1)
-	if err != nil {
-		panic(err.Error())
-	}
-
 	var wg sync.WaitGroup
-	go ReadTexts(wssshConn)
+	var conn *wsconn.WSConn
 
-	// Move these all to flags TODO
-	_, err = GetClient(wssshConn, "ajp", "/home/ajp/.ssh/id_ed25519", "/home/ajp/systems/public_keys/ajpikul.com_hostkey")
-	if err == nil {
-		// Start goroutine to wait for signal to close
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		wg.Add(1)
-		go func() {
-			for _ = range c {
+	// Start goroutine to wait for signal to close
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	wg.Add(1)
+	go func() {
+		defaultLogger.Info("Waiting for SIGINT")
+		for _ = range c {
+			// Here we exit the program
+			defaultLogger.Info("Recieved SIGINT")
+			break
+		}
+		wg.Done()
+	}()
+	go func() {
+		for { // All this depends on ssh sitting on top of Read() which TODO Not sure it does
+			var err error
+			conn, err = Reconnect()
+			if err != nil {
+				defaultLogger.Error("Problem with reconnect: ")
+				defaultLogger.Error(err.Error())
 				break
 			}
-			wg.Done()
-		}()
-	}
+			// There is a conn.Wait() but since we're blocking Close() I'm not sure it'll work
+			// But if we get a write error on the underlying ssh, we should be good to go
+			go ReadTexts(conn)
+			err = Pinger(conn)
+			defaultLogger.Error("Pinger Error: ")
+			defaultLogger.Error(err.Error())
+			conn.Conn.WriteControl(gws.CloseMessage, []byte(""), time.Time{})
+			conn.CloseAll() // close it all, we don't want a memory leak
+		}
+		defaultLogger.Info("Trying to send myself interrupt")
+
+		pid := os.Getpid()
+		p, _ := os.FindProcess(pid)
+		_ = p.Signal(os.Interrupt)
+
+	}()
+
 	wg.Wait()
-	wssshConn.Conn.WriteControl(gws.CloseMessage, []byte(""), time.Time{})
-	err = wssshConn.CloseAll()
-	if err != nil {
-		defaultLogger.Info("Tried to close: " + err.Error())
+	defaultLogger.Info("passed wg.Wait()")
+	if conn != nil {
+		defaultLogger.Info("Trying to close cleanly")
+		conn.Conn.WriteControl(gws.CloseMessage, []byte(""), time.Time{})
+		err := conn.CloseAll()
+		if err != nil {
+			defaultLogger.Info("Tried to close: " + err.Error())
+		}
 	}
+	// The channel has been closed by someone else
+
 }

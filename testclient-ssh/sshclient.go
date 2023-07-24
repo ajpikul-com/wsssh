@@ -16,7 +16,8 @@ func GetClient(conn *wsconn.WSConn, username string, myPrivateKey string, remote
 		return nil, err
 	}
 	public, _, _, _, err := ssh.ParseAuthorizedKey(publicBytes)
-
+	defaultLogger.Info("Public Key:")
+	defaultLogger.Info(string(publicBytes))
 	hostKeyCallback := ssh.FixedHostKey(public)
 
 	privateBytes, err := os.ReadFile(myPrivateKey)
