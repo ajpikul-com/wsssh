@@ -99,7 +99,7 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 			defaultLogger.Info("WSConn.Read() n: " + strconv.Itoa(n))
 			if err != nil || b == nil {
 				conn.r = nil
-				mt = conn.mt
+				mt := conn.mt
 				conn.mt = 0
 				if err == io.EOF {
 					defaultLogger.Error("WSConn.Read() EOF End Of Frame")
@@ -195,7 +195,7 @@ func (conn *WSConn) AllowClose() {
 
 func (conn *WSConn) CloseAll() error {
 	conn.allowClose.Store(true)
-	conn.Close()
+	return conn.Close()
 }
 
 // Close is a simple wrap for the underlying websocket.Conn
