@@ -1,8 +1,14 @@
 ## Developer Tip
 
-some updates to Close - need to think about mutex now
-use `make local` to point everything to local versions
-use `make official` before push
+
+* ssh on the binary connection doesn't seem "closeable"- it goes after underlying connection
+so it continues to sit on read, which is good, ebcause something needs to sit on read as that's
+basically the main loop
+* also ping takes two or three pings to realize that connection is closed
+
+* some updates to Close - need to think about mutex now
+* use `make local` to point everything to local versions
+* use `make official` before push
 
 ## wsconn
 
