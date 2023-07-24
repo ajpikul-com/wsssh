@@ -1,7 +1,6 @@
 package wsconn
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -41,8 +40,8 @@ type WSConn struct {
 	r  io.Reader
 	mt int
 	// TextBuffer
-	TextBuffer *bytes.Buffer // We're going to have to initialize this TODO
-	TextChan   chan int
+	TextChan      chan string
+	subscribeText atomic.Bool
 
 	// WRITING STUFF
 	writeMutex sync.Mutex
@@ -54,7 +53,7 @@ type WSConn struct {
 
 // New returns an initialized *WSConn
 func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
-	wsconn = &WSConn{Conn: conn, r: nil, mt: 0, TextBuffer: new(bytes.Buffer)}
+	wsconn = &WSConn{Conn: conn, r: nil, mt: 0}
 	wsconn.Conn.SetPingHandler(func(message string) error {
 		defaultLogger.Info("Ping In: " + message)
 		err = wsconn.WritePong([]byte(message))
@@ -67,6 +66,15 @@ func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
 		return err
 	})
 	return wsconn, nil
+}
+
+func (conn *WSConn) SubscribeToTexts() (chan string, error) {
+	old := conn.subscribeText.Swap(true)
+	if old {
+		return nil, errors.New("Already subscribed")
+	}
+	conn.TextChan = make(chan string)
+	return conn.TextChan, nil
 }
 
 // Read() satisfying net.Conn
@@ -106,12 +114,10 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 					if n != 0 {
 						if mt == websocket.BinaryMessage {
 							return n, nil
-						} // else text message
-						_, err := conn.TextBuffer.Write(b[0:n]) // Length TODO
-						if err != nil {
-							return n, err // TODO not technically correct
 						}
-						conn.TextChan <- n
+						if conn.subscribeText.Load() {
+							conn.TextChan <- string(b[0:n])
+						}
 					}
 					break
 				} else {
@@ -120,16 +126,8 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 				}
 			}
 			if conn.mt == websocket.TextMessage {
-				if conn.TextChan != nil {
-					_, err := conn.TextBuffer.Write(b[0:n]) // Length TODO
-					if err != nil {
-						return n, err // TODO not technically correct
-					}
-					conn.TextChan <- n
-				} else {
-					// return 0, errors.New("wsconn.TextChan: Doesn't exist")
-					// Just keep looking for binary messages
-					conn.TextBuffer.Reset()
+				if conn.subscribeText.Load() {
+					conn.TextChan <- string(b[0:n])
 				}
 			} else {
 				return n, err
@@ -213,7 +211,6 @@ func (conn *WSConn) Close() error {
 		conn.TextChan = nil
 	}
 	defaultLogger.Info("Freeing TextBuffer Pointer")
-	conn.TextBuffer = nil // probalby not necessary
 	return err
 }
 
