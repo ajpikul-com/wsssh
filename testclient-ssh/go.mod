@@ -6,7 +6,7 @@ go 1.20
 
 require (
 	github.com/ajpikul-com/ilog v0.0.0-20230714204235-1f6eb0175462
-	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721063641-93a47da82b32
+	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230724151316-9032cb7553fd
 	github.com/gorilla/websocket v1.5.0
 	golang.org/x/crypto v0.11.0
 )
