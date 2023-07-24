@@ -69,13 +69,14 @@ func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	_, chans, reqs, err := GetServer(wsconn, "/home/ajp/systems/public_keys/ajp", "/home/ajp/.ssh/id_ed25519")
+	sshconn, chans, reqs, err := GetServer(wsconn, "/home/ajp/systems/public_keys/ajp", "/home/ajp/.ssh/id_ed25519")
+	// TODO CONNECTION MIGHT HAVE METADATA
 	if err != nil {
 		defaultLogger.Error("Error with ssh server: ")
 		defaultLogger.Error(err.Error())
 		return
 	}
-	defaultLogger.Info("They authed!")
+	defaultLogger.Info("They authed! Welcome, " + sshconn.Permissions.Extensions["comment"])
 	go ReadTexts(wsconn)
 	go ssh.DiscardRequests(reqs)
 	for _ = range chans {
