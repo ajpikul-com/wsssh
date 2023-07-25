@@ -1,6 +1,8 @@
 github.com/ajpikul-com/ilog v0.0.0-20230725152811-6d417358332d/go.mod h1:xSmkTWT+APtO6ZsnlK54Z12Gxa6AFnwtUOx1r7g0njw=
 github.com/ajpikul-com/ilog v0.0.0-20230725172214-d939933fe302 h1:lnmJWAROpyuywtYGrgS5DbCRVpwVhbx817soNn6qQmQ=
 github.com/ajpikul-com/ilog v0.0.0-20230725172214-d939933fe302/go.mod h1:xSmkTWT+APtO6ZsnlK54Z12Gxa6AFnwtUOx1r7g0njw=
+github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230725174458-c0b34ec1edda h1:k7fuJM/iI/u0++T/yILLyOOzBDTMFz3vNum4tFDy+jM=
+github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230725174458-c0b34ec1edda/go.mod h1:RL7onkYnOoa6qCnTfAWTBJttPsC6/8RCa0N3x5vzpBE=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

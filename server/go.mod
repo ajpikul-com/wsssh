@@ -2,11 +2,9 @@ module github.com/ajpikul-com/wsssh/server
 
 go 1.20
 
-replace github.com/ajpikul-com/wsssh/wsconn => ../wsconn
-
 require (
-	github.com/ajpikul-com/ilog v0.0.0-20230714204235-1f6eb0175462
-	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230721053849-652868e6d262
+	github.com/ajpikul-com/ilog v0.0.0-20230725172214-d939933fe302
+	github.com/ajpikul-com/wsssh/wsconn v0.0.0-20230725174458-c0b34ec1edda
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 )
