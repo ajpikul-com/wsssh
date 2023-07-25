@@ -55,7 +55,7 @@ type WSConn struct {
 func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
 	wsconn = &WSConn{Conn: conn, r: nil, mt: 0}
 	wsconn.Conn.SetPingHandler(func(message string) error {
-		defaultLogger.Info("Ping In: " + message)
+		defaultLogger.Debug("Ping In: " + message)
 		err = wsconn.WritePong([]byte(message))
 		if err == websocket.ErrCloseSent {
 			return nil
@@ -71,7 +71,9 @@ func New(conn *websocket.Conn) (wsconn *WSConn, err error) {
 func (conn *WSConn) SubscribeToTexts() (chan string, error) {
 	old := conn.subscribeText.Swap(true)
 	if old {
-		return nil, errors.New("Already subscribed")
+		err := errors.New("Cannot subscribe to texts, already subscribed")
+		defaultLogger.Error(err.Error())
+		return nil, err
 	}
 	conn.TextChan = make(chan string)
 	return conn.TextChan, nil
@@ -81,36 +83,39 @@ func (conn *WSConn) SubscribeToTexts() (chan string, error) {
 func (conn *WSConn) Read(b []byte) (n int, err error) {
 	for {
 		if conn.mt == 0 { // Need NextReader()
-			defaultLogger.Info("WSConn.Read(): getting new frame")
+			defaultLogger.Debug("Getting new frame")
 			mt, r, err := conn.Conn.NextReader() // Any error NextReader receives is fatal
 			if err != nil {
 				if websocket.IsCloseError(err,
 					websocket.CloseNormalClosure,
 					websocket.CloseAbnormalClosure,
 				) {
-					defaultLogger.Error("WSConn.Read() Received A NextReader Close Error: " + err.Error())
+					defaultLogger.Error("NextReader Close Error: " + err.Error())
 					return 0, err
 				}
 				return 0, err
-				defaultLogger.Error("WSConn.Read() Received A NextReader Non-Close Error: " + err.Error())
+				defaultLogger.Error("NextReader Non-Close Error: " + err.Error())
 			}
+			// TODO good argument that websockets should close itself here. This is 99% where close will be detected first. So all close detection would go faster, and close would have to get called anyway.
 
 			conn.mt = mt
 			conn.r = r
 
 			if conn.mt > websocket.BinaryMessage {
-				return 0, errors.New("WSConn.Read(): Wrong error type received")
+				err = errors.New("Wrong msg type received, we should never get here")
+				defaultLogger.Error(err.Error())
+				return 0, err
 			}
 		}
 		for {
 			n, err = conn.r.Read(b)
-			defaultLogger.Info("WSConn.Read() n: " + strconv.Itoa(n))
+			defaultLogger.Debug("WSConn.Read() n: " + strconv.Itoa(n))
 			if err != nil || b == nil {
 				conn.r = nil
 				mt := conn.mt
 				conn.mt = 0
 				if err == io.EOF {
-					defaultLogger.Error("WSConn.Read() EOF End Of Frame")
+					defaultLogger.Debug("EndOfFrame received")
 					if n != 0 {
 						if mt == websocket.BinaryMessage {
 							return n, nil
@@ -121,7 +126,7 @@ func (conn *WSConn) Read(b []byte) (n int, err error) {
 					}
 					break
 				} else {
-					defaultLogger.Error("WSConn.Read() error: " + err.Error())
+					defaultLogger.Error("websocket.Read() error! " + err.Error())
 					return n, err
 				}
 			}
@@ -147,13 +152,13 @@ func (conn *WSConn) WriteText(b []byte) (n int, err error) {
 }
 
 func (conn *WSConn) WritePing(b []byte) (err error) {
-	defaultLogger.Info("Ping Out: " + string(b[:]))
+	defaultLogger.Debug("Ping Out: " + string(b[:]))
 	_, err = conn.write(b, websocket.PingMessage)
 	return
 }
 
 func (conn *WSConn) WritePong(b []byte) (err error) {
-	defaultLogger.Info("Pong Out: " + string(b[:]))
+	defaultLogger.Debug("Pong Out: " + string(b[:]))
 	_, err = conn.write(b, websocket.PongMessage)
 	return
 }
@@ -203,14 +208,18 @@ func (conn *WSConn) Close() error {
 	}
 	conn.closeMutex.Lock()
 	defer conn.closeMutex.Unlock()
-	defaultLogger.Info("Closing underlying connection")
+	defaultLogger.Debug("Closing underlying connection")
 	err := conn.Conn.Close()
+	if err != nil {
+		defaultLogger.Error("websocket.Close error: " + err.Error())
+		// continue to close TextChan, I suppose
+	}
 	if conn.TextChan != nil {
-		defaultLogger.Info("Closing channel")
+		defaultLogger.Debug("Closing channel")
 		close(conn.TextChan)
 		conn.TextChan = nil
 	}
-	defaultLogger.Info("Freeing TextBuffer Pointer")
+	defaultLogger.Debug("Freeing TextBuffer Pointer")
 	return err
 }
 
@@ -227,11 +236,9 @@ func (conn *WSConn) RemoteAddr() net.Addr {
 // SetDeadline is a simple wrap for the underlying websocket.Conn
 func (conn *WSConn) SetDeadline(t time.Time) error {
 	if err := conn.SetReadDeadline(t); err != nil {
-		defaultLogger.Error("SetReadDeadline(): " + err.Error())
 		return err
 	}
 	if err := conn.SetWriteDeadline(t); err != nil {
-		defaultLogger.Error("SetWriteDeadline(): " + err.Error())
 		return err
 	}
 	return nil
