@@ -28,7 +28,7 @@ func GetServer(wsconn *wsconn.WSConn, clients string, privateKey string) (*ssh.S
 
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
-			defaultLogger.Info("Running Public Key Callback")
+			defaultLogger.Debug("Running Public Key Callback")
 			comment, ok := authorizedKeysMap[string(pubKey.Marshal())]
 			if ok {
 				return &ssh.Permissions{
@@ -43,11 +43,11 @@ func GetServer(wsconn *wsconn.WSConn, clients string, privateKey string) (*ssh.S
 	}
 	privateBytes, err := os.ReadFile(privateKey)
 	if err != nil {
-		panic("what happened to our private key")
+		panic("Problem loading private key file")
 	}
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		panic("couldn't parse private key")
+		panic("Couldn't parse private key")
 	}
 
 	config.AddHostKey(private)
