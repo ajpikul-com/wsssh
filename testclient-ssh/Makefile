@@ -1,7 +1,8 @@
-run:
+run: ../wsconn/*.go *.go
 	go build
 	./testclient
 
+.PHONY:  local official init
 init:
 	cp go.mod go.mod.local
 	cp go.mod go.mod.official

@@ -6,20 +6,21 @@ import (
 	"strconv"
 
 	"github.com/ajpikul-com/ilog"
-	"github.com/ajpikul-com/wsssh/wsconn"
+	//"github.com/ajpikul-com/wsssh/wsconn"
 )
 
 var defaultLogger ilog.LoggerInterface
 
 func init() {
-	defaultLogger = &ilog.SimpleLogger{}
+	defaultLogger = &ilog.ZapWrap{}
 	err := defaultLogger.Init()
 	if err != nil {
 		panic(err)
 	}
-	wsconn.SetDefaultLogger(defaultLogger)
-	// TODO: test non debug
-	// TODO: test sugarred logger for function
+	/*packageLogger := &ilog.SimpleLogger{}
+	packageLogger.Level(ilog.INFO)
+	packageLogger.Init()
+	wsconn.SetDefaultLogger(packageLogger)*/
 }
 
 func dumpResponse(resp *http.Response) string {
