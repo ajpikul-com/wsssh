@@ -18,9 +18,11 @@ func init() {
 		panic(err)
 	}
 	wsconn.SetDefaultLogger(defaultLogger)
+	// TODO: test non debug
+	// TODO: test sugarred logger for function
 }
 
-func dumpResponse(resp *http.Response) {
+func dumpResponse(resp *http.Response) string {
 	if resp != nil {
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -28,6 +30,7 @@ func dumpResponse(resp *http.Response) {
 			// return ?
 		}
 		extra := "Body:\n" + string(b)
-		defaultLogger.Error("HTTP Response Info: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra)
+		return "HTTP Response Info: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra
 	}
+	return ""
 }

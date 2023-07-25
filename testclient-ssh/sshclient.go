@@ -16,8 +16,7 @@ func GetClient(conn *wsconn.WSConn, username string, myPrivateKey string, remote
 		return nil, err
 	}
 	public, _, _, _, err := ssh.ParseAuthorizedKey(publicBytes)
-	defaultLogger.Info("Public Key:")
-	defaultLogger.Info(string(publicBytes))
+	defaultLogger.Debug("Public Key:" + string(publicBytes))
 	hostKeyCallback := ssh.FixedHostKey(public)
 
 	privateBytes, err := os.ReadFile(myPrivateKey)
@@ -46,4 +45,4 @@ func GetClient(conn *wsconn.WSConn, username string, myPrivateKey string, remote
 }
 
 // NOTE: client's have sessions, which are a great way to use feature of ssh.
-// Client close close the underlying session, but don't send message over ssh to server to close
+// Client close close the underlying session, but don't send message over ssh to server to close. It seems ssh stays reading.
