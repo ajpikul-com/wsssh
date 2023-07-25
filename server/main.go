@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 	// "sync"
-	"strconv"
+	//"strconv"
 	"time"
 
 	"github.com/ajpikul-com/ilog"
@@ -47,22 +47,25 @@ func WriteBinary(conn *wsconn.WSConn) {
 }
 
 func ReadTexts(conn *wsconn.WSConn) {
-	textChan := make(chan int)
-	conn.TextChan = textChan
-	p := make([]byte, 1024)
-	for _ = range textChan {
-		for conn.TextBuffer.Len() > 0 {
-			n, err := conn.TextBuffer.Read(p)
-			defaultLogger.Info("ReadTexts: " + string(p[0:n]))
-			defaultLogger.Info("ReadTexts Remaining: " + strconv.Itoa(conn.TextBuffer.Len()))
-			if err != nil {
-				defaultLogger.Error("ReadTexts: TextBuffer.Read():" + err.Error())
-				break
+	/*
+		textChan := make(chan int)
+		conn.TextChan = textChan
+		p := make([]byte, 1024)
+		for _ = range textChan {
+			for conn.TextBuffer.Len() > 0 {
+				n, err := conn.TextBuffer.Read(p)
+				defaultLogger.Info("ReadTexts: " + string(p[0:n]))
+				defaultLogger.Info("ReadTexts Remaining: " + strconv.Itoa(conn.TextBuffer.Len()))
+				if err != nil {
+					defaultLogger.Error("ReadTexts: TextBuffer.Read():" + err.Error())
+					break
+				}
 			}
 		}
-	}
-	defaultLogger.Info("ReadTexts Channel Closed")
-	// The channel has been closed by someone else
+		defaultLogger.Info("ReadTexts Channel Closed")
+		// The channel has been closed by someone else
+	*/
+	// WE DON'T DO IT LIKE THIS ANYMORE, SSH CLIENT/SERVER HAS IT RIGHT
 }
 
 func ReadBinary(conn *wsconn.WSConn) {
