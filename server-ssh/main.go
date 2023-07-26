@@ -13,7 +13,7 @@ import (
 )
 
 var defaultLogger ilog.LoggerInterface
-var HostPort string = ":4648"
+var HostPort string = "127.0.0.1:4648"
 
 func init() {
 	defaultLogger = &ilog.SimpleLogger{}
@@ -90,6 +90,7 @@ func ServeWSConn(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	m := mux.NewRouter()
+	// Add two gets here. Why are we using mux? I don't know
 	m.HandleFunc("/", ServeWSConn)
 	s := &http.Server{
 		Addr:           HostPort,
@@ -100,6 +101,7 @@ func main() {
 	}
 
 	defaultLogger.Info("Initiating server")
+	//err := s.ListenAndServeTLS("/etc/letsencrypt/live/ajpikul.com/fullchain.pem", "/etc/letsencrypt/live/ajpikul.com/privkey.pem")
 	err := s.ListenAndServe()
 	if err != nil {
 		defaultLogger.Error("http.Server.ListenAndServe: " + err.Error())
