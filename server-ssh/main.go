@@ -101,7 +101,6 @@ func main() {
 	}
 
 	defaultLogger.Info("Initiating server")
-	//err := s.ListenAndServeTLS("/etc/letsencrypt/live/ajpikul.com/fullchain.pem", "/etc/letsencrypt/live/ajpikul.com/privkey.pem")
 	err := s.ListenAndServe()
 	if err != nil {
 		defaultLogger.Error("http.Server.ListenAndServe: " + err.Error())
