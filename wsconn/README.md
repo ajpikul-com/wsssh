@@ -1,5 +1,7 @@
 # wsconn
 
+This readme sucks and I don't care.
+
 The `type Conn struct` provided by gorilla websockets does not fulfil `net.Conn` because 
 it doesn't have simple `Read` and `Write` functions.
 

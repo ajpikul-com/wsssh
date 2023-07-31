@@ -2,11 +2,11 @@
 
 
 * ssh on the binary connection doesn't seem "closeable"- it goes after underlying connection
-so it continues to sit on read, which is good, ebcause something needs to sit on read as that's
+so it continues to sit on read, which is good, because something needs to sit on read as that's
 basically the main loop
+* but it doesn't close actually close anything because close is blocked!
 * also ping takes two or three pings to realize that connection is closed
 
-* some updates to Close - need to think about mutex now
 * use `make local` to point everything to local versions
 * use `make official` before push
 
@@ -22,11 +22,11 @@ whatever is attached to your `binary net.Conn()` knowing.
 
 ### testclient and server
 
-`testclient` and `server` are just tests
+All of this is basically old, although they do a little more than sysboss/sysclient do. Those are a better start though.
 
-these are essentiall proofs for wsconn. Write's don't verify they went through. They just assume that no one takes only part of their write. Reads on the other hand will check to see if there is more to read until there is none.
+`*-ssh` contians interesting info.
 
-Client and Server are basically the same here except client fully expects to have control of flow and will have a bunch of confused functions if server closes on it.
+So does `old_ssh_tunnel`
 
 ## wscli
 

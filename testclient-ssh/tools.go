@@ -22,16 +22,3 @@ func init() {
 	packageLogger.Init()
 	wsconn.SetDefaultLogger(packageLogger)
 }
-
-func dumpResponse(resp *http.Response) string {
-	if resp != nil {
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			defaultLogger.Error(err.Error())
-			// return ?
-		}
-		extra := "Body:\n" + string(b)
-		return "HTTP Response Info: " + strconv.Itoa(resp.StatusCode) + " " + resp.Status + "\n" + extra
-	}
-	return ""
-}

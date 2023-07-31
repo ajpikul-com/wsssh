@@ -10,7 +10,6 @@ func Reconnect() (*wsconn.WSConn, error) {
 	conn1, resp, err := dialer.Dial(url, nil)
 	if err != nil {
 		defaultLogger.Error("websocket.Dialier.Dial: Dial fail: " + err.Error())
-		dumpResponse(resp)
 		return nil, err
 	}
 	wssshConn, err := wsconn.New(conn1)
